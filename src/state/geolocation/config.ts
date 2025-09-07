@@ -1,16 +1,23 @@
-import {networkRetry} from '#/lib/async/retry'
+// ライブラリとユーティリティ
+import {networkRetry} from '#/lib/async/retry'                    // ネットワークリトライ処理
 import {
   DEFAULT_GEOLOCATION_CONFIG,
   GEOLOCATION_CONFIG_URL,
-} from '#/state/geolocation/const'
-import {emitGeolocationConfigUpdate} from '#/state/geolocation/events'
-import {logger} from '#/state/geolocation/logger'
-import {BAPP_CONFIG_DEV_BYPASS_SECRET, IS_DEV} from '#/env'
-import {type Device, device} from '#/storage'
+} from '#/state/geolocation/const'                                // 位置情報設定の定数
+import {emitGeolocationConfigUpdate} from '#/state/geolocation/events'  // 位置情報設定更新イベント
+import {logger} from '#/state/geolocation/logger'                 // 位置情報専用ロガー
+import {BAPP_CONFIG_DEV_BYPASS_SECRET, IS_DEV} from '#/env'       // 環境設定
+import {type Device, device} from '#/storage'                    // デバイスストレージ
 
+/**
+ * リモートサーバーから位置情報設定を取得する関数
+ * @param url - 位置情報設定を取得するAPI URL
+ * @returns デバイス位置情報設定またはundefined
+ */
 async function getGeolocationConfig(
   url: string,
 ): Promise<Device['geolocation']> {
+  // 開発環境では認証バイパスヘッダーを追加
   const res = await fetch(url, {
     headers: IS_DEV
       ? {
@@ -27,43 +34,45 @@ async function getGeolocationConfig(
 
   if (json.countryCode) {
     /**
-     * Only construct known values here, ignore any extras.
+     * レスポンスから既知の値のみを抽出して設定オブジェクトを構築
+     * 余分なフィールドは無視する
      */
     const config: Device['geolocation'] = {
-      countryCode: json.countryCode,
-      regionCode: json.regionCode ?? undefined,
-      ageRestrictedGeos: json.ageRestrictedGeos ?? [],
-      ageBlockedGeos: json.ageBlockedGeos ?? [],
+      countryCode: json.countryCode,                              // 国コード（必須）
+      regionCode: json.regionCode ?? undefined,                  // 地域コード（オプション）
+      ageRestrictedGeos: json.ageRestrictedGeos ?? [],           // 年齢制限地域リスト
+      ageBlockedGeos: json.ageBlockedGeos ?? [],                 // 年齢ブロック地域リスト
     }
     logger.debug(`config: success`)
     return config
   } else {
-    return undefined
+    return undefined  // countryCodeが存在しない場合は設定なし
   }
 }
 
 /**
- * Local promise used within this file only.
+ * このファイル内でのみ使用されるローカルPromise
+ * 位置情報設定の解決処理の状態を追跡
  */
 let geolocationConfigResolution: Promise<{success: boolean}> | undefined
 
 /**
- * Begin the process of resolving geolocation config. This should be called
- * once at app start.
+ * 位置情報設定の解決処理を開始する関数
+ * アプリ起動時に一度だけ呼び出される
  *
- * THIS METHOD SHOULD NEVER THROW.
+ * この関数は決して例外をthrowしません（Fail-safe設計）
  *
- * This method is otherwise not used for any purpose. To ensure geolocation
- * config is resolved, use {@link ensureGeolocationConfigIsResolved}
+ * 位置情報設定の解決を確実に待つには {@link ensureGeolocationConfigIsResolved} を使用
  */
 export function beginResolveGeolocationConfig() {
   /**
-   * Here for debug purposes. Uncomment to prevent hitting the remote geo service, and apply whatever data you require for testing.
+   * デバッグ用コード - リモート位置情報サービスへのアクセスを無効化し、
+   * テスト用データを適用する場合にコメントアウトを外す
    */
   // if (__DEV__) {
   //   geolocationConfigResolution = new Promise(y => y({success: true}))
-  //   device.set(['deviceGeolocation'], undefined) // clears GPS data
-  //   device.set(['geolocation'], DEFAULT_GEOLOCATION_CONFIG) // clears bapp-config data
+  //   device.set(['deviceGeolocation'], undefined) // GPS データをクリア
+  //   device.set(['geolocation'], DEFAULT_GEOLOCATION_CONFIG) // bapp-config データをクリア
   //   return
   // }
 
@@ -71,13 +80,13 @@ export function beginResolveGeolocationConfig() {
     let success = true
 
     try {
-      // Try once, fail fast
+      // 一度だけ試行、高速失敗
       const config = await getGeolocationConfig(GEOLOCATION_CONFIG_URL)
       if (config) {
-        device.set(['geolocation'], config)
-        emitGeolocationConfigUpdate(config)
+        device.set(['geolocation'], config)        // デバイスストレージに保存
+        emitGeolocationConfigUpdate(config)        // 設定更新イベントを発火
       } else {
-        // endpoint should throw on all failures, this is insurance
+        // エンドポイントは通常すべての失敗でthrowするはずだが、念のため
         throw new Error(
           `geolocation config: nothing returned from initial request`,
         )
@@ -89,10 +98,10 @@ export function beginResolveGeolocationConfig() {
         safeMessage: e.message,
       })
 
-      // set to default
+      // デフォルト設定にフォールバック
       device.set(['geolocation'], DEFAULT_GEOLOCATION_CONFIG)
 
-      // retry 3 times, but don't await, proceed with default
+      // バックグラウンドで3回リトライ（awaitしない、デフォルト設定で進行）
       networkRetry(3, () => getGeolocationConfig(GEOLOCATION_CONFIG_URL))
         .then(config => {
           if (config) {
@@ -100,12 +109,12 @@ export function beginResolveGeolocationConfig() {
             emitGeolocationConfigUpdate(config)
             success = true
           } else {
-            // endpoint should throw on all failures, this is insurance
+            // エンドポイントは通常すべての失敗でthrowするはずだが、念のため
             throw new Error(`config: nothing returned from retries`)
           }
         })
         .catch((e: any) => {
-          // complete fail closed
+          // 完全失敗時はクローズドポリシー（安全側に倒す）
           logger.debug(`config: failed retries`, {
             safeMessage: e.message,
           })
@@ -117,25 +126,25 @@ export function beginResolveGeolocationConfig() {
 }
 
 /**
- * Ensure that geolocation config has been resolved, or at the very least attempted
- * once. Subsequent retries will not be captured by this `await`. Those will be
- * reported via {@link emitGeolocationConfigUpdate}.
+ * 位置情報設定が解決されているか、少なくとも一度は試行されていることを確認する関数
+ * 後続のリトライはこのawaitではキャッチされず、{@link emitGeolocationConfigUpdate} 経由で報告される
  */
 export async function ensureGeolocationConfigIsResolved() {
   if (!geolocationConfigResolution) {
     throw new Error(`config: beginResolveGeolocationConfig not called yet`)
   }
 
+  // キャッシュされた設定があるかチェック
   const cached = device.get(['geolocation'])
   if (cached) {
-    logger.debug(`config: using cache`)
+    logger.debug(`config: using cache`)                          // キャッシュを使用
   } else {
-    logger.debug(`config: no cache`)
-    const {success} = await geolocationConfigResolution
+    logger.debug(`config: no cache`)                             // キャッシュなし
+    const {success} = await geolocationConfigResolution          // 解決処理の完了を待機
     if (success) {
-      logger.debug(`config: resolved`)
+      logger.debug(`config: resolved`)                           // 解決成功
     } else {
-      logger.info(`config: failed to resolve`)
+      logger.info(`config: failed to resolve`)                  // 解決失敗（デフォルト設定使用）
     }
   }
 }

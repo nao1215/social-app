@@ -1,12 +1,17 @@
+// React基本機能
 import {useCallback, useRef} from 'react'
-import {Linking} from 'react-native'
-import * as Notifications from 'expo-notifications'
-import {i18n, type MessageDescriptor} from '@lingui/core'
-import {msg} from '@lingui/macro'
+import {Linking} from 'react-native'                                    // ディープリンク処理
+import * as Notifications from 'expo-notifications'                     // プッシュ通知処理
+import {i18n, type MessageDescriptor} from '@lingui/core'               // 国際化コア機能
+import {msg} from '@lingui/macro'                                       // 国際化メッセージマクロ
+
+// React Navigation - タブナビゲーション
 import {
   type BottomTabBarProps,
   createBottomTabNavigator,
-} from '@react-navigation/bottom-tabs'
+} from '@react-navigation/bottom-tabs'                                  // ボトムタブナビゲーター
+
+// React Navigation - コアナビゲーション
 import {
   CommonActions,
   createNavigationContainerRef,
@@ -15,19 +20,26 @@ import {
   type LinkingOptions,
   NavigationContainer,
   StackActions,
-} from '@react-navigation/native'
+} from '@react-navigation/native'                                       // ナビゲーション基本機能
 
-import {timeout} from '#/lib/async/timeout'
-import {useColorSchemeStyle} from '#/lib/hooks/useColorSchemeStyle'
+// ライブラリ・ユーティリティ
+import {timeout} from '#/lib/async/timeout'                             // 非同期タイムアウト処理
+import {useColorSchemeStyle} from '#/lib/hooks/useColorSchemeStyle'     // カラースキームスタイルフック
+
+// 通知処理
 import {
   getNotificationPayload,
   type NotificationPayload,
   notificationToURL,
   storePayloadForAccountSwitch,
-} from '#/lib/hooks/useNotificationHandler'
-import {useWebScrollRestoration} from '#/lib/hooks/useWebScrollRestoration'
-import {logger as notyLogger} from '#/lib/notifications/util'
-import {buildStateObject} from '#/lib/routes/helpers'
+} from '#/lib/hooks/useNotificationHandler'                             // 通知ハンドリング
+
+// その他のフック・ユーティリティ
+import {useWebScrollRestoration} from '#/lib/hooks/useWebScrollRestoration' // Webスクロール復元
+import {logger as notyLogger} from '#/lib/notifications/util'           // 通知ログ
+import {buildStateObject} from '#/lib/routes/helpers'                   // ルート状態構築
+
+// ナビゲーション型定義
 import {
   type AllNavigatorParams,
   type BottomTabNavigatorParams,
@@ -37,89 +49,116 @@ import {
   type MyProfileTabNavigatorParams,
   type NotificationsTabNavigatorParams,
   type SearchTabNavigatorParams,
-} from '#/lib/routes/types'
-import {type RouteParams, type State} from '#/lib/routes/types'
-import {attachRouteToLogEvents, logEvent} from '#/lib/statsig/statsig'
-import {bskyTitle} from '#/lib/strings/headings'
-import {logger} from '#/logger'
-import {isNative, isWeb} from '#/platform/detection'
-import {useUnreadNotifications} from '#/state/queries/notifications/unread'
-import {useSession} from '#/state/session'
+} from '#/lib/routes/types'                                             // ナビゲーターパラメータ型
+import {type RouteParams, type State} from '#/lib/routes/types'         // ルートパラメータ・状態型
+
+// アプリ共通機能
+import {attachRouteToLogEvents, logEvent} from '#/lib/statsig/statsig'  // 統計・イベントログ
+import {bskyTitle} from '#/lib/strings/headings'                       // アプリタイトル文字列
+import {logger} from '#/logger'                                         // アプリロガー
+import {isNative, isWeb} from '#/platform/detection'                   // プラットフォーム判定
+
+// 状態管理
+import {useUnreadNotifications} from '#/state/queries/notifications/unread' // 未読通知取得
+import {useSession} from '#/state/session'                             // セッション管理
 import {
   shouldRequestEmailConfirmation,
   snoozeEmailConfirmationPrompt,
-} from '#/state/shell/reminders'
-import {CommunityGuidelinesScreen} from '#/view/screens/CommunityGuidelines'
-import {CopyrightPolicyScreen} from '#/view/screens/CopyrightPolicy'
-import {DebugModScreen} from '#/view/screens/DebugMod'
-import {FeedsScreen} from '#/view/screens/Feeds'
-import {HomeScreen} from '#/view/screens/Home'
-import {ListsScreen} from '#/view/screens/Lists'
-import {ModerationBlockedAccounts} from '#/view/screens/ModerationBlockedAccounts'
-import {ModerationModlistsScreen} from '#/view/screens/ModerationModlists'
-import {ModerationMutedAccounts} from '#/view/screens/ModerationMutedAccounts'
-import {NotFoundScreen} from '#/view/screens/NotFound'
-import {NotificationsScreen} from '#/view/screens/Notifications'
-import {PostThreadScreen} from '#/view/screens/PostThread'
-import {PrivacyPolicyScreen} from '#/view/screens/PrivacyPolicy'
-import {ProfileScreen} from '#/view/screens/Profile'
-import {ProfileFeedLikedByScreen} from '#/view/screens/ProfileFeedLikedBy'
-import {ProfileListScreen} from '#/view/screens/ProfileList'
-import {SavedFeeds} from '#/view/screens/SavedFeeds'
-import {Storybook} from '#/view/screens/Storybook'
-import {SupportScreen} from '#/view/screens/Support'
-import {TermsOfServiceScreen} from '#/view/screens/TermsOfService'
-import {BottomBar} from '#/view/shell/bottom-bar/BottomBar'
-import {createNativeStackNavigatorWithAuth} from '#/view/shell/createNativeStackNavigatorWithAuth'
-import {BookmarksScreen} from '#/screens/Bookmarks'
-import {SharedPreferencesTesterScreen} from '#/screens/E2E/SharedPreferencesTesterScreen'
-import HashtagScreen from '#/screens/Hashtag'
-import {LogScreen} from '#/screens/Log'
-import {MessagesScreen} from '#/screens/Messages/ChatList'
-import {MessagesConversationScreen} from '#/screens/Messages/Conversation'
-import {MessagesInboxScreen} from '#/screens/Messages/Inbox'
-import {MessagesSettingsScreen} from '#/screens/Messages/Settings'
-import {ModerationScreen} from '#/screens/Moderation'
-import {Screen as ModerationVerificationSettings} from '#/screens/Moderation/VerificationSettings'
-import {Screen as ModerationInteractionSettings} from '#/screens/ModerationInteractionSettings'
-import {NotificationsActivityListScreen} from '#/screens/Notifications/ActivityList'
-import {PostLikedByScreen} from '#/screens/Post/PostLikedBy'
-import {PostQuotesScreen} from '#/screens/Post/PostQuotes'
-import {PostRepostedByScreen} from '#/screens/Post/PostRepostedBy'
-import {ProfileKnownFollowersScreen} from '#/screens/Profile/KnownFollowers'
-import {ProfileFeedScreen} from '#/screens/Profile/ProfileFeed'
-import {ProfileFollowersScreen} from '#/screens/Profile/ProfileFollowers'
-import {ProfileFollowsScreen} from '#/screens/Profile/ProfileFollows'
-import {ProfileLabelerLikedByScreen} from '#/screens/Profile/ProfileLabelerLikedBy'
-import {ProfileSearchScreen} from '#/screens/Profile/ProfileSearch'
-import {SearchScreen} from '#/screens/Search'
-import {AboutSettingsScreen} from '#/screens/Settings/AboutSettings'
-import {AccessibilitySettingsScreen} from '#/screens/Settings/AccessibilitySettings'
-import {AccountSettingsScreen} from '#/screens/Settings/AccountSettings'
-import {ActivityPrivacySettingsScreen} from '#/screens/Settings/ActivityPrivacySettings'
-import {AppearanceSettingsScreen} from '#/screens/Settings/AppearanceSettings'
-import {AppIconSettingsScreen} from '#/screens/Settings/AppIconSettings'
-import {AppPasswordsScreen} from '#/screens/Settings/AppPasswords'
-import {ContentAndMediaSettingsScreen} from '#/screens/Settings/ContentAndMediaSettings'
-import {ExternalMediaPreferencesScreen} from '#/screens/Settings/ExternalMediaPreferences'
-import {FollowingFeedPreferencesScreen} from '#/screens/Settings/FollowingFeedPreferences'
-import {InterestsSettingsScreen} from '#/screens/Settings/InterestsSettings'
-import {LanguageSettingsScreen} from '#/screens/Settings/LanguageSettings'
-import {LegacyNotificationSettingsScreen} from '#/screens/Settings/LegacyNotificationSettings'
-import {NotificationSettingsScreen} from '#/screens/Settings/NotificationSettings'
-import {ActivityNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/ActivityNotificationSettings'
-import {LikeNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/LikeNotificationSettings'
-import {LikesOnRepostsNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/LikesOnRepostsNotificationSettings'
-import {MentionNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/MentionNotificationSettings'
-import {MiscellaneousNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/MiscellaneousNotificationSettings'
-import {NewFollowerNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/NewFollowerNotificationSettings'
-import {QuoteNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/QuoteNotificationSettings'
-import {ReplyNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/ReplyNotificationSettings'
-import {RepostNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/RepostNotificationSettings'
-import {RepostsOnRepostsNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/RepostsOnRepostsNotificationSettings'
-import {PrivacyAndSecuritySettingsScreen} from '#/screens/Settings/PrivacyAndSecuritySettings'
-import {SettingsScreen} from '#/screens/Settings/Settings'
-import {ThreadPreferencesScreen} from '#/screens/Settings/ThreadPreferences'
+} from '#/state/shell/reminders'                                        // メール確認リマインダー
+
+// 基本画面コンポーネント（Legacy view/screens）
+import {CommunityGuidelinesScreen} from '#/view/screens/CommunityGuidelines'    // コミュニティガイドライン
+import {CopyrightPolicyScreen} from '#/view/screens/CopyrightPolicy'            // 著作権ポリシー
+import {DebugModScreen} from '#/view/screens/DebugMod'                          // デバッグモード
+import {FeedsScreen} from '#/view/screens/Feeds'                                // フィード一覧
+import {HomeScreen} from '#/view/screens/Home'                                  // ホーム画面
+import {ListsScreen} from '#/view/screens/Lists'                                // リスト画面
+import {ModerationBlockedAccounts} from '#/view/screens/ModerationBlockedAccounts'  // ブロック済みアカウント
+import {ModerationModlistsScreen} from '#/view/screens/ModerationModlists'      // モデレーションリスト
+import {ModerationMutedAccounts} from '#/view/screens/ModerationMutedAccounts'  // ミュート済みアカウント
+import {NotFoundScreen} from '#/view/screens/NotFound'                          // 404エラー画面
+import {NotificationsScreen} from '#/view/screens/Notifications'                // 通知画面
+import {PostThreadScreen} from '#/view/screens/PostThread'                      // 投稿スレッド画面
+import {PrivacyPolicyScreen} from '#/view/screens/PrivacyPolicy'                // プライバシーポリシー
+import {ProfileScreen} from '#/view/screens/Profile'                            // プロフィール画面
+import {ProfileFeedLikedByScreen} from '#/view/screens/ProfileFeedLikedBy'      // プロフィールフィードいいね一覧
+import {ProfileListScreen} from '#/view/screens/ProfileList'                    // プロフィールリスト
+import {SavedFeeds} from '#/view/screens/SavedFeeds'                            // 保存したフィード
+import {Storybook} from '#/view/screens/Storybook'                              // Storybook（開発用）
+import {SupportScreen} from '#/view/screens/Support'                            // サポート画面
+import {TermsOfServiceScreen} from '#/view/screens/TermsOfService'              // 利用規約
+
+// シェルコンポーネント
+import {BottomBar} from '#/view/shell/bottom-bar/BottomBar'                     // ボトムタブバー
+import {createNativeStackNavigatorWithAuth} from '#/view/shell/createNativeStackNavigatorWithAuth'  // 認証付きスタックナビゲーター
+
+// 新しい画面コンポーネント（screens/）
+// 基本機能
+import {BookmarksScreen} from '#/screens/Bookmarks'                             // ブックマーク画面
+import {SharedPreferencesTesterScreen} from '#/screens/E2E/SharedPreferencesTesterScreen'  // E2Eテスト用
+import HashtagScreen from '#/screens/Hashtag'                                   // ハッシュタグ画面
+import {LogScreen} from '#/screens/Log'                                         // ログ画面
+
+// メッセージ機能
+import {MessagesScreen} from '#/screens/Messages/ChatList'                      // チャット一覧
+import {MessagesConversationScreen} from '#/screens/Messages/Conversation'     // 会話画面
+import {MessagesInboxScreen} from '#/screens/Messages/Inbox'                   // メッセージ受信箱
+import {MessagesSettingsScreen} from '#/screens/Messages/Settings'             // メッセージ設定
+
+// モデレーション機能
+import {ModerationScreen} from '#/screens/Moderation'                           // モデレーション設定
+import {Screen as ModerationVerificationSettings} from '#/screens/Moderation/VerificationSettings'  // 認証設定
+import {Screen as ModerationInteractionSettings} from '#/screens/ModerationInteractionSettings'     // インタラクション設定
+
+// 通知・投稿関連
+import {NotificationsActivityListScreen} from '#/screens/Notifications/ActivityList'  // 通知アクティビティ一覧
+import {PostLikedByScreen} from '#/screens/Post/PostLikedBy'                    // 投稿いいね一覧
+import {PostQuotesScreen} from '#/screens/Post/PostQuotes'                      // 投稿引用一覧
+import {PostRepostedByScreen} from '#/screens/Post/PostRepostedBy'              // 投稿リポスト一覧
+
+// プロフィール関連
+import {ProfileKnownFollowersScreen} from '#/screens/Profile/KnownFollowers'    // 知っているフォロワー
+import {ProfileFeedScreen} from '#/screens/Profile/ProfileFeed'                 // プロフィールフィード
+import {ProfileFollowersScreen} from '#/screens/Profile/ProfileFollowers'       // フォロワー一覧
+import {ProfileFollowsScreen} from '#/screens/Profile/ProfileFollows'           // フォロー一覧
+import {ProfileLabelerLikedByScreen} from '#/screens/Profile/ProfileLabelerLikedBy'  // ラベラーいいね一覧
+import {ProfileSearchScreen} from '#/screens/Profile/ProfileSearch'             // プロフィール検索
+
+// 検索機能
+import {SearchScreen} from '#/screens/Search'                                   // 検索画面
+
+// 設定画面 - 基本設定
+import {AboutSettingsScreen} from '#/screens/Settings/AboutSettings'            // アプリについて
+import {AccessibilitySettingsScreen} from '#/screens/Settings/AccessibilitySettings'  // アクセシビリティ設定
+import {AccountSettingsScreen} from '#/screens/Settings/AccountSettings'        // アカウント設定
+import {ActivityPrivacySettingsScreen} from '#/screens/Settings/ActivityPrivacySettings'  // アクティビティプライバシー
+import {AppearanceSettingsScreen} from '#/screens/Settings/AppearanceSettings'  // 外観設定
+import {AppIconSettingsScreen} from '#/screens/Settings/AppIconSettings'        // アプリアイコン設定
+import {AppPasswordsScreen} from '#/screens/Settings/AppPasswords'              // アプリパスワード
+import {ContentAndMediaSettingsScreen} from '#/screens/Settings/ContentAndMediaSettings'  // コンテンツとメディア設定
+import {ExternalMediaPreferencesScreen} from '#/screens/Settings/ExternalMediaPreferences'  // 外部メディア設定
+import {FollowingFeedPreferencesScreen} from '#/screens/Settings/FollowingFeedPreferences'  // フォローフィード設定
+import {InterestsSettingsScreen} from '#/screens/Settings/InterestsSettings'    // 興味・関心設定
+import {LanguageSettingsScreen} from '#/screens/Settings/LanguageSettings'      // 言語設定
+import {LegacyNotificationSettingsScreen} from '#/screens/Settings/LegacyNotificationSettings'  // 旧通知設定
+import {NotificationSettingsScreen} from '#/screens/Settings/NotificationSettings'  // 通知設定
+
+// 設定画面 - 詳細通知設定
+import {ActivityNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/ActivityNotificationSettings'  // アクティビティ通知
+import {LikeNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/LikeNotificationSettings'  // いいね通知
+import {LikesOnRepostsNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/LikesOnRepostsNotificationSettings'  // リポストのいいね通知
+import {MentionNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/MentionNotificationSettings'  // メンション通知
+import {MiscellaneousNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/MiscellaneousNotificationSettings'  // その他通知
+import {NewFollowerNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/NewFollowerNotificationSettings'  // 新しいフォロワー通知
+import {QuoteNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/QuoteNotificationSettings'  // 引用通知
+import {ReplyNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/ReplyNotificationSettings'  // リプライ通知
+import {RepostNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/RepostNotificationSettings'  // リポスト通知
+import {RepostsOnRepostsNotificationSettingsScreen} from '#/screens/Settings/NotificationSettings/RepostsOnRepostsNotificationSettings'  // リポストのリポスト通知
+
+// 設定画面 - その他
+import {PrivacyAndSecuritySettingsScreen} from '#/screens/Settings/PrivacyAndSecuritySettings'  // プライバシー・セキュリティ
+import {SettingsScreen} from '#/screens/Settings/Settings'                      // 設定メイン画面
+import {ThreadPreferencesScreen} from '#/screens/Settings/ThreadPreferences'    // スレッド設定
 import {
   StarterPackScreen,
   StarterPackScreenShort,

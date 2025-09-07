@@ -1,43 +1,51 @@
+// React基本機能
 import React from 'react'
-import {ActivityIndicator, StyleSheet} from 'react-native'
-import {useFocusEffect} from '@react-navigation/native'
+import {ActivityIndicator, StyleSheet} from 'react-native'          // ローディング表示とスタイル
+import {useFocusEffect} from '@react-navigation/native'             // 画面フォーカス時の副作用処理
 
-import {PROD_DEFAULT_FEED} from '#/lib/constants'
-import {useNonReactiveCallback} from '#/lib/hooks/useNonReactiveCallback'
-import {useOTAUpdates} from '#/lib/hooks/useOTAUpdates'
-import {useSetTitle} from '#/lib/hooks/useSetTitle'
-import {useRequestNotificationsPermission} from '#/lib/notifications/notifications'
+// 定数・フック・ユーティリティ
+import {PROD_DEFAULT_FEED} from '#/lib/constants'                  // 本番環境デフォルトフィード
+import {useNonReactiveCallback} from '#/lib/hooks/useNonReactiveCallback'  // 非リアクティブコールバック
+import {useOTAUpdates} from '#/lib/hooks/useOTAUpdates'            // OTAアップデート処理
+import {useSetTitle} from '#/lib/hooks/useSetTitle'                // ページタイトル設定
+import {useRequestNotificationsPermission} from '#/lib/notifications/notifications'  // 通知許可リクエスト
+
+// ナビゲーション・統計・プラットフォーム
 import {
   type HomeTabNavigatorParams,
   type NativeStackScreenProps,
-} from '#/lib/routes/types'
-import {logEvent} from '#/lib/statsig/statsig'
-import {isWeb} from '#/platform/detection'
-import {emitSoftReset} from '#/state/events'
+} from '#/lib/routes/types'                                        // ルート型定義
+import {logEvent} from '#/lib/statsig/statsig'                    // イベントログ
+import {isWeb} from '#/platform/detection'                        // プラットフォーム判定
+
+// 状態管理
+import {emitSoftReset} from '#/state/events'                      // ソフトリセットイベント
 import {
   type SavedFeedSourceInfo,
   usePinnedFeedsInfos,
-} from '#/state/queries/feed'
-import {type FeedDescriptor, type FeedParams} from '#/state/queries/post-feed'
-import {usePreferencesQuery} from '#/state/queries/preferences'
-import {type UsePreferencesQueryResponse} from '#/state/queries/preferences/types'
-import {useSession} from '#/state/session'
-import {useSetMinimalShellMode} from '#/state/shell'
-import {useLoggedOutViewControls} from '#/state/shell/logged-out'
-import {useSelectedFeed, useSetSelectedFeed} from '#/state/shell/selected-feed'
-import {FeedPage} from '#/view/com/feeds/FeedPage'
-import {HomeHeader} from '#/view/com/home/HomeHeader'
+} from '#/state/queries/feed'                                      // ピン留めフィード情報
+import {type FeedDescriptor, type FeedParams} from '#/state/queries/post-feed'  // フィード型定義
+import {usePreferencesQuery} from '#/state/queries/preferences'   // 設定クエリ
+import {type UsePreferencesQueryResponse} from '#/state/queries/preferences/types'  // 設定型定義
+import {useSession} from '#/state/session'                        // セッション管理
+import {useSetMinimalShellMode} from '#/state/shell'              // ミニマルシェルモード
+import {useLoggedOutViewControls} from '#/state/shell/logged-out' // ログアウト画面制御
+import {useSelectedFeed, useSetSelectedFeed} from '#/state/shell/selected-feed'  // 選択フィード管理
+
+// UIコンポーネント
+import {FeedPage} from '#/view/com/feeds/FeedPage'                // フィードページ
+import {HomeHeader} from '#/view/com/home/HomeHeader'             // ホームヘッダー
 import {
   Pager,
   type PagerRef,
   type RenderTabBarFnProps,
-} from '#/view/com/pager/Pager'
-import {CustomFeedEmptyState} from '#/view/com/posts/CustomFeedEmptyState'
-import {FollowingEmptyState} from '#/view/com/posts/FollowingEmptyState'
-import {FollowingEndOfFeed} from '#/view/com/posts/FollowingEndOfFeed'
-import {NoFeedsPinned} from '#/screens/Home/NoFeedsPinned'
-import * as Layout from '#/components/Layout'
-import {useDemoMode} from '#/storage/hooks/demo-mode'
+} from '#/view/com/pager/Pager'                                   // ページャー（タブスワイプ）
+import {CustomFeedEmptyState} from '#/view/com/posts/CustomFeedEmptyState'  // カスタムフィード空状態
+import {FollowingEmptyState} from '#/view/com/posts/FollowingEmptyState'    // フォロー空状態
+import {FollowingEndOfFeed} from '#/view/com/posts/FollowingEndOfFeed'      // フォロー終端表示
+import {NoFeedsPinned} from '#/screens/Home/NoFeedsPinned'        // ピン留めフィードなし表示
+import * as Layout from '#/components/Layout'                     // レイアウトコンポーネント
+import {useDemoMode} from '#/storage/hooks/demo-mode'             // デモモード
 
 type Props = NativeStackScreenProps<HomeTabNavigatorParams, 'Home' | 'Start'>
 export function HomeScreen(props: Props) {
