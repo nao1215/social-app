@@ -1,44 +1,76 @@
+// React関連のインポート - 状態管理とネイティブコンポーネント
 import {useState} from 'react'
 import {Alert, LayoutAnimation, Pressable, View} from 'react-native'
+// リンキング - 外部URLをブラウザーで開く
 import {Linking} from 'react-native'
+// アクセシビリティ - モーション減少ユーザーの配慮
 import {useReducedMotion} from 'react-native-reanimated'
+// AT Protocolの型定義 - アクターデータとモデレーション
 import {type AppBskyActorDefs, moderateProfile} from '@atproto/api'
+// 国際化関連 - メッセージと翻訳コンポーネント
 import {msg, Trans} from '@lingui/macro'
 import {useLingui} from '@lingui/react'
+// ナビゲーション - 画面遷移とスタックナビゲーション
 import {useNavigation} from '@react-navigation/native'
 import {type NativeStackScreenProps} from '@react-navigation/native-stack'
 
+// アクター状態 - ユーザーのオンライン状態管理
 import {useActorStatus} from '#/lib/actor-status'
+// 定数 - ヘルプデスクURL
 import {HELP_DESK_URL} from '#/lib/constants'
+// アカウント切り替え - マルチアカウント管理
 import {useAccountSwitcher} from '#/lib/hooks/useAccountSwitcher'
+// OTA更新 - Over The Airアップデート機能
 import {useApplyPullRequestOTAUpdate} from '#/lib/hooks/useOTAUpdates'
+// ルーティング型定義 - ナビゲーションパラメータ
 import {
   type CommonNavigatorParams,
   type NavigationProp,
 } from '#/lib/routes/types'
+// 文字列処理 - 表示名とハンドルのサニタイズ
 import {sanitizeDisplayName} from '#/lib/strings/display-names'
 import {sanitizeHandle} from '#/lib/strings/handles'
+// プラットフォーム検出 - iOS/ネイティブ環境の判定
 import {isIOS, isNative} from '#/platform/detection'
+// プロフィールシャドウ - キャッシュされたプロフィールデータ
 import {useProfileShadow} from '#/state/cache/profile-shadow'
+// 永続化ストレージ - アプリ設定の永続化
 import * as persisted from '#/state/persisted'
 import {clearStorage} from '#/state/persisted'
+// モデレーション設定 - コンテンツモデレーションオプション
 import {useModerationOpts} from '#/state/preferences/moderation-opts'
+// チャット宣言 - アクター宣言レコードの削除
 import {useDeleteActorDeclaration} from '#/state/queries/messages/actor-declaration'
+// プロフィールクエリ - ユーザープロフィールデータ取得
 import {useProfileQuery, useProfilesQuery} from '#/state/queries/profile'
+// セッション管理 - エージェント、アカウント、セッションAPI
 import {useAgent} from '#/state/session'
 import {type SessionAccount, useSession, useSessionApi} from '#/state/session'
+// オンボーディング - 初回利用時の導線制御
 import {useOnboardingDispatch} from '#/state/shell'
+// ログアウトビュー - 未ログイン状態の表示制御
 import {useLoggedOutViewControls} from '#/state/shell/logged-out'
+// UI管理 - アクティブ要素の一括クローズ
 import {useCloseAllActiveElements} from '#/state/util'
+// トースト通知 - ユーザーフィードバック表示
 import * as Toast from '#/view/com/util/Toast'
+// ユーザーアバター - プロフィール画像コンポーネント
 import {UserAvatar} from '#/view/com/util/UserAvatar'
+// 設定リスト - 設定画面用リストコンポーネント
 import * as SettingsList from '#/screens/Settings/components/SettingsList'
+// スタイリング - CSSアトム、プラットフォーム、トークン、ブレークポイント、テーマ
 import {atoms as a, platform, tokens, useBreakpoints, useTheme} from '#/alf'
+// 年齢確認通知 - 年齢制限関連の通知
 import {AgeAssuranceDismissibleNotice} from '#/components/ageAssurance/AgeAssuranceDismissibleNotice'
+// アバタースタック - 複数アバターの重ね表示
 import {AvatarStackWithFetch} from '#/components/AvatarStack'
+// ボタンコンポーネント - 基本ボタンとテキスト
 import {Button, ButtonText} from '#/components/Button'
+// ダイアログ制御 - モーダルダイアログ管理
 import {useDialogControl} from '#/components/Dialog'
+// アカウント切り替えダイアログ - マルチアカウント切り替えUI
 import {SwitchAccountDialog} from '#/components/dialogs/SwitchAccount'
+// アイコン群 - 各設定項目のアイコン
 import {Accessibility_Stroke2_Corner2_Rounded as AccessibilityIcon} from '#/components/icons/Accessibility'
 import {Bell_Stroke2_Corner0_Rounded as NotificationIcon} from '#/components/icons/Bell'
 import {BubbleInfo_Stroke2_Corner2_Rounded as BubbleInfoIcon} from '#/components/icons/BubbleInfo'
@@ -49,47 +81,81 @@ import {DotGrid_Stroke2_Corner0_Rounded as DotsHorizontal} from '#/components/ic
 import {Earth_Stroke2_Corner2_Rounded as EarthIcon} from '#/components/icons/Globe'
 import {Lock_Stroke2_Corner2_Rounded as LockIcon} from '#/components/icons/Lock'
 import {PaintRoller_Stroke2_Corner2_Rounded as PaintRollerIcon} from '#/components/icons/PaintRoller'
+// ペルソナ関連アイコン - ユーザー、グループ、追加、削除
 import {
   Person_Stroke2_Corner2_Rounded as PersonIcon,
   PersonGroup_Stroke2_Corner2_Rounded as PersonGroupIcon,
   PersonPlus_Stroke2_Corner2_Rounded as PersonPlusIcon,
   PersonX_Stroke2_Corner0_Rounded as PersonXIcon,
 } from '#/components/icons/Person'
+// モデレーションアイコン - 手を上げたアイコン
 import {RaisingHand4Finger_Stroke2_Corner2_Rounded as HandIcon} from '#/components/icons/RaisingHand'
+// ウィンドウアイコン - コンテンツとメディア設定用
 import {Window_Stroke2_Corner2_Rounded as WindowIcon} from '#/components/icons/Window'
+// レイアウトコンポーネント - 画面レイアウト構造
 import * as Layout from '#/components/Layout'
+// ローダー - 読み込み中インジケーター
 import {Loader} from '#/components/Loader'
+// メニューコンポーネント - コンテキストメニュー
 import * as Menu from '#/components/Menu'
+// ポリシー更新 - 2025年8月のポリシー更新ID
 import {ID as PolicyUpdate202508} from '#/components/PolicyUpdateOverlay/updates/202508/config'
+// プロンプト - 確認ダイアログ
 import * as Prompt from '#/components/Prompt'
+// タイポグラフィ - テキストコンポーネント
 import {Text} from '#/components/Typography'
+// 本人確認 - フル本人確認状態
 import {useFullVerificationState} from '#/components/verification'
+// 本人確認ボタン - チェックマーク表示判定とボタン
 import {
   shouldShowVerificationCheckButton,
   VerificationCheckButton,
 } from '#/components/verification/VerificationCheckButton'
+// 環境変数 - 内部ビルドフラグ
 import {IS_INTERNAL} from '#/env'
+// ストレージ - デバイスストレージとフック
 import {device, useStorage} from '#/storage'
+// アクティビティ通知 - 購読通知のナッジ状態
 import {useActivitySubscriptionsNudged} from '#/storage/hooks/activity-subscriptions-nudged'
 
+// プロパティ型定義 - 設定画面のプロパティ
 type Props = NativeStackScreenProps<CommonNavigatorParams, 'Settings'>
+
+/**
+ * 設定画面コンポーネント
+ * ユーザーアカウント、プライバシー、セキュリティ、通知、アピアランスなど
+ * アプリの全設定にアクセスできるメイン設定ハブ
+ * マルチアカウント管理と開発者オプションも含む
+ */
 export function SettingsScreen({}: Props) {
+  // 国際化フック - UI文字列の翻訳
   const {_} = useLingui()
+  // アクセシビリティ - モーション減少ユーザー設定
   const reducedMotion = useReducedMotion()
+  // セッションAPI - 全アカウントログアウト機能
   const {logoutEveryAccount} = useSessionApi()
+  // セッション情報 - アカウント一覧と現在のアカウント
   const {accounts, currentAccount} = useSession()
+  // アカウント切り替えダイアログの制御
   const switchAccountControl = useDialogControl()
+  // サインアウト確認プロンプトの制御
   const signOutPromptControl = Prompt.usePromptControl()
+  // 現在のユーザープロフィールデータ
   const {data: profile} = useProfileQuery({did: currentAccount?.did})
+  // 他のアカウントのプロフィールデータ
   const {data: otherProfiles} = useProfilesQuery({
     handles: accounts
       .filter(acc => acc.did !== currentAccount?.did)
       .map(acc => acc.handle),
   })
+  // アカウント切り替えフック - 切り替え処理中のDIDとコールバック
   const {pendingDid, onPressSwitchAccount} = useAccountSwitcher()
+  // アカウント一覧の表示状態
   const [showAccounts, setShowAccounts] = useState(false)
+  // 開発者オプションの表示状態
   const [showDevOptions, setShowDevOptions] = useState(false)
 
+  // 設定画面のレンダリング - ヘッダー、プロフィールプレビュー、設定項目一覧
   return (
     <Layout.Screen>
       <Layout.Header.Outer>
@@ -103,8 +169,10 @@ export function SettingsScreen({}: Props) {
       </Layout.Header.Outer>
       <Layout.Content>
         <SettingsList.Container>
+          {/* 年齢確認通知 - 年齢制限コンテンツ関連の通知 */}
           <AgeAssuranceDismissibleNotice style={[a.px_lg, a.pt_xs, a.pb_xl]} />
 
+          {/* プロフィールプレビューエリア - 現在のユーザー情報を表示 */}
           <View
             style={[
               a.px_xl,

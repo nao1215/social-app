@@ -1,29 +1,57 @@
+// React関連のインポート - メモ化、コールバック、状態管理フック
 import {memo, useCallback, useMemo, useState} from 'react'
+// React Nativeコンポーネント - アクティビティインジケーターとビュー
 import {ActivityIndicator, View} from 'react-native'
+// AT Protocolの型定義 - フィードデータ型
 import {type AppBskyFeedDefs} from '@atproto/api'
+// 国際化関連 - メッセージと翻訳コンポーネント
 import {msg, Trans} from '@lingui/macro'
 import {useLingui} from '@lingui/react'
 
+// カラーパレット - テーマカラー管理
 import {usePalette} from '#/lib/hooks/usePalette'
+// 検索クエリ拡張 - クエリ文字列の拡張処理
 import {augmentSearchQuery} from '#/lib/strings/helpers'
+// アクター検索 - ユーザー検索クエリフック
 import {useActorSearch} from '#/state/queries/actor-search'
+// フィード検索 - 人気フィード検索クエリフック
 import {usePopularFeedsSearch} from '#/state/queries/feed'
+// 投稿検索 - 投稿検索クエリフック
 import {useSearchPostsQuery} from '#/state/queries/search-posts'
+// セッション管理 - ユーザーセッション情報
 import {useSession} from '#/state/session'
+// ログアウトビュー - 未ログイン状態の表示制御
 import {useLoggedOutViewControls} from '#/state/shell/logged-out'
+// UI管理 - アクティブ要素の一括クローズ
 import {useCloseAllActiveElements} from '#/state/util'
+// ページングコンポーネント - タブ形式のページャー
 import {Pager} from '#/view/com/pager/Pager'
+// タブバー - ページングのタブナビゲーション
 import {TabBar} from '#/view/com/pager/TabBar'
+// 投稿コンポーネント - 個別投稿表示
 import {Post} from '#/view/com/post/Post'
+// プロフィールカード - フォローボタン付きプロフィールカード
 import {ProfileCardWithFollowBtn} from '#/view/com/profile/ProfileCard'
+// リストコンポーネント - 仮想化リスト
 import {List} from '#/view/com/util/List'
+// スタイリング - CSSアトム、テーマ、ウェブスタイル
 import {atoms as a, useTheme, web} from '#/alf'
+// フィードカード - フィード表示コンポーネント
 import * as FeedCard from '#/components/FeedCard'
+// レイアウトコンポーネント - 画面レイアウト構造
 import * as Layout from '#/components/Layout'
+// インラインリンク - テキスト内リンクコンポーネント
 import {InlineLinkText} from '#/components/Link'
+// 検索エラー - 検索エラー表示コンポーネント
 import {SearchError} from '#/components/SearchError'
+// タイポグラフィ - テキストコンポーネント
 import {Text} from '#/components/Typography'
 
+/**
+ * 検索結果コンポーネント
+ * クエリに基づいて「トップ」「最新」「ユーザー」「フィード」のタブで結果を表示
+ * パラメータ付きクエリの場合は投稿結果のみ、シンプルクエリの場合は全タブを表示
+ */
 let SearchResults = ({
   query,
   queryWithParams,
@@ -31,20 +59,23 @@ let SearchResults = ({
   onPageSelected,
   headerHeight,
 }: {
-  query: string
-  queryWithParams: string
-  activeTab: number
-  onPageSelected: (page: number) => void
-  headerHeight: number
+  query: string // 元のクエリ文字列
+  queryWithParams: string // パラメータ付きのクエリ文字列
+  activeTab: number // アクティブなタブインデックス
+  onPageSelected: (page: number) => void // ページ選択時のコールバック
+  headerHeight: number // ヘッダーの高さ（スティッキー配置用）
 }): React.ReactNode => {
+  // 国際化フック - UI文字列の翻訳
   const {_} = useLingui()
 
+  // タブセクションの設定 - クエリタイプによって表示するタブを変更
   const sections = useMemo(() => {
     if (!queryWithParams) return []
+    // パラメータなしのシンプルクエリかどうかを判定
     const noParams = queryWithParams === query
     return [
       {
-        title: _(msg`Top`),
+        title: _(msg`Top`), // 人気投稿タブ
         component: (
           <SearchScreenPostResults
             query={queryWithParams}
@@ -54,7 +85,7 @@ let SearchResults = ({
         ),
       },
       {
-        title: _(msg`Latest`),
+        title: _(msg`Latest`), // 最新投稿タブ
         component: (
           <SearchScreenPostResults
             query={queryWithParams}
@@ -63,14 +94,16 @@ let SearchResults = ({
           />
         ),
       },
+      // パラメータなしの場合のみユーザータブを表示
       noParams && {
-        title: _(msg`People`),
+        title: _(msg`People`), // ユーザー検索タブ
         component: (
           <SearchScreenUserResults query={query} active={activeTab === 2} />
         ),
       },
+      // パラメータなしの場合のみフィードタブを表示
       noParams && {
-        title: _(msg`Feeds`),
+        title: _(msg`Feeds`), // フィード検索タブ
         component: (
           <SearchScreenFeedsResults query={query} active={activeTab === 3} />
         ),
@@ -81,24 +114,32 @@ let SearchResults = ({
     }[]
   }, [_, query, queryWithParams, activeTab])
 
+  // 検索結果ページャーのレンダリング - タブバーとコンテンツを表示
   return (
     <Pager
       onPageSelected={onPageSelected}
       renderTabBar={props => (
+        // スティッキータブバー - ヘッダーの下に固定表示
         <Layout.Center style={[a.z_10, web([a.sticky, {top: headerHeight}])]}>
           <TabBar items={sections.map(section => section.title)} {...props} />
         </Layout.Center>
       )}
       initialPage={0}>
+      {/* タブコンテンツ - 各セクションのコンポーネントを表示 */}
       {sections.map((section, i) => (
         <View key={i}>{section.component}</View>
       ))}
     </Pager>
   )
 }
+// メモ化してパフォーマンスを最適化
 SearchResults = memo(SearchResults)
 export {SearchResults}
 
+/**
+ * ローディングコンポーネント
+ * 検索結果の読み込み中を示すスピナーを表示
+ */
 function Loader() {
   return (
     <Layout.Content>
@@ -109,14 +150,19 @@ function Loader() {
   )
 }
 
+/**
+ * 空状態コンポーネント
+ * 検索結果が空、またはエラーが発生した場合のメッセージ表示
+ * メインメッセージ、オプションのエラー詳細、追加コンテンツを表示
+ */
 function EmptyState({
   message,
   error,
   children,
 }: {
-  message: string
-  error?: string
-  children?: React.ReactNode
+  message: string // メインメッセージ
+  error?: string // オプションのエラー情報
+  children?: React.ReactNode // 追加コンテンツ
 }) {
   const t = useTheme()
 
@@ -124,10 +170,13 @@ function EmptyState({
     <Layout.Content>
       <View style={[a.p_xl]}>
         <View style={[t.atoms.bg_contrast_25, a.rounded_sm, a.p_lg]}>
+          {/* メインメッセージ */}
           <Text style={[a.text_md]}>{message}</Text>
 
+          {/* エラー情報がある場合の追加表示 */}
           {error && (
             <>
+              {/* 区切り線 */}
               <View
                 style={[
                   {
@@ -140,12 +189,14 @@ function EmptyState({
                 ]}
               />
 
+              {/* エラーメッセージ */}
               <Text style={[t.atoms.text_contrast_medium]}>
                 <Trans>Error: {error}</Trans>
               </Text>
             </>
           )}
 
+          {/* 追加コンテンツ */}
           {children}
         </View>
       </View>

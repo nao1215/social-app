@@ -1,27 +1,37 @@
-import {Fragment, useEffect, useRef} from 'react'
-import {StyleSheet} from 'react-native'
-import {SafeAreaView} from 'react-native-safe-area-context'
-import BottomSheet from '@discord/bottom-sheet/src'
+// React基本機能
+import {Fragment, useEffect, useRef} from 'react'              // Reactコア機能
+import {StyleSheet} from 'react-native'                       // スタイル定義
+import {SafeAreaView} from 'react-native-safe-area-context'   // セーフエリア対応ビュー
+import BottomSheet from '@discord/bottom-sheet/src'           // ボトムシート
 
-import {usePalette} from '#/lib/hooks/usePalette'
-import {useModalControls, useModals} from '#/state/modals'
-import {FullWindowOverlay} from '#/components/FullWindowOverlay'
-import {createCustomBackdrop} from '../util/BottomSheetCustomBackdrop'
-import * as CreateOrEditListModal from './CreateOrEditList'
-import * as DeleteAccountModal from './DeleteAccount'
-import * as InviteCodesModal from './InviteCodes'
-import * as ContentLanguagesSettingsModal from './lang-settings/ContentLanguagesSettings'
-import * as UserAddRemoveListsModal from './UserAddRemoveLists'
+// フック・状態管理・コンポーネント
+import {usePalette} from '#/lib/hooks/usePalette'             // カラーパレット
+import {useModalControls, useModals} from '#/state/modals'    // モーダル状態管理
+import {FullWindowOverlay} from '#/components/FullWindowOverlay' // フルスクリーンオーバーレイ
+import {createCustomBackdrop} from '../util/BottomSheetCustomBackdrop' // カスタム背景
 
-const DEFAULT_SNAPPOINTS = ['90%']
-const HANDLE_HEIGHT = 24
+// モーダルコンポーネント群
+import * as CreateOrEditListModal from './CreateOrEditList'   // リスト作成・編集
+import * as DeleteAccountModal from './DeleteAccount'         // アカウント削除
+import * as InviteCodesModal from './InviteCodes'             // 招待コード
+import * as ContentLanguagesSettingsModal from './lang-settings/ContentLanguagesSettings' // コンテンツ言語設定
+import * as UserAddRemoveListsModal from './UserAddRemoveLists' // ユーザーリスト追加削除
 
+const DEFAULT_SNAPPOINTS = ['90%']  // デフォルトスナップポイント（90%の高さ）
+const HANDLE_HEIGHT = 24           // ハンドルの高さ
+
+/**
+ * モーダルコンテナコンポーネント
+ * 各種モーダルを統一的に管理し、ボトムシートとして表示
+ * Modal container component
+ * Manages various modals uniformly and displays them as bottom sheets
+ */
 export function ModalsContainer() {
-  const {isModalActive, activeModals} = useModals()
-  const {closeModal} = useModalControls()
-  const bottomSheetRef = useRef<BottomSheet>(null)
-  const pal = usePalette('default')
-  const activeModal = activeModals[activeModals.length - 1]
+  const {isModalActive, activeModals} = useModals()     // モーダル状態
+  const {closeModal} = useModalControls()               // モーダル操作
+  const bottomSheetRef = useRef<BottomSheet>(null)      // ボトムシート参照
+  const pal = usePalette('default')                     // カラーパレット
+  const activeModal = activeModals[activeModals.length - 1] // アクティブなモーダル（最後に開かれたもの）
 
   const onBottomSheetChange = async (snapPoint: number) => {
     if (snapPoint === -1) {

@@ -1,20 +1,26 @@
-import {nanoid} from 'nanoid/non-secure'
+// ログ機能とユーティリティ
+import {nanoid} from 'nanoid/non-secure'            // セキュアでないnanoid（パフォーマンス重視）
 
-import {logEvent} from '#/lib/statsig/statsig'
-import {add} from '#/logger/logDump'
-import {type MetricEvents} from '#/logger/metrics'
-import {bitdriftTransport} from '#/logger/transports/bitdrift'
-import {consoleTransport} from '#/logger/transports/console'
-import {sentryTransport} from '#/logger/transports/sentry'
+// 統計・ログ管理
+import {logEvent} from '#/lib/statsig/statsig'      // StatSigイベントログ
+import {add} from '#/logger/logDump'                // ログダンプ追加
+import {type MetricEvents} from '#/logger/metrics'  // メトリクスイベント型
+
+// ログトランスポート（出力先）
+import {bitdriftTransport} from '#/logger/transports/bitdrift' // Bitdriftトランスポート
+import {consoleTransport} from '#/logger/transports/console'   // コンソールトランスポート
+import {sentryTransport} from '#/logger/transports/sentry'     // Sentryトランスポート
+
+// ログ型定義・ユーティリティ
 import {
   LogContext,
   LogLevel,
   type Metadata,
   type Transport,
-} from '#/logger/types'
-import {enabledLogLevels} from '#/logger/util'
-import {isNative} from '#/platform/detection'
-import {ENV} from '#/env'
+} from '#/logger/types'                             // ログ型定義
+import {enabledLogLevels} from '#/logger/util'     // 有効ログレベル
+import {isNative} from '#/platform/detection'      // プラットフォーム判定
+import {ENV} from '#/env'                           // 環境変数
 
 const TRANSPORTS: Transport[] = (function configureTransports() {
   switch (ENV) {

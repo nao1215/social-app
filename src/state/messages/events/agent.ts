@@ -1,15 +1,25 @@
+// AT Protocol API型定義 - Blueskyエージェントと会話ログ取得APIの型
 import {type BskyAgent, type ChatBskyConvoGetLog} from '@atproto/api'
+// イベントエミッター - 非同期イベント配信系統
+// Event emitter - asynchronous event delivery system
 import EventEmitter from 'eventemitter3'
+// 一意ID生成 - インスタンスとリクエストの一意識別子生成
 import {nanoid} from 'nanoid/non-secure'
 
+// ネットワーク再試行ユーティリティ - API呼び出しの自動リトライ機能
 import {networkRetry} from '#/lib/async/retry'
+// ダイレクトメッセージサービス用ヘッダー - DM API呼び出しに必要なHTTPヘッダー
 import {DM_SERVICE_HEADERS} from '#/lib/constants'
+// ネットワークエラー判定 - エラーがネットワーク起因か判断
 import {isNetworkError} from '#/lib/strings/errors'
+// ログ出力システム - デバッグとエラートラッキング
 import {Logger} from '#/logger'
+// メッセージイベントバスのポーリング間隔定数 - アクティブとバックグラウンド時の更新頻度
 import {
   BACKGROUND_POLL_INTERVAL,
   DEFAULT_POLL_INTERVAL,
 } from '#/state/messages/events/const'
+// メッセージイベントバスの型定義 - イベント、ディスパッチ、ステータスなどの型
 import {
   type MessagesEventBusDispatch,
   MessagesEventBusDispatchEvent,
@@ -19,32 +29,65 @@ import {
   MessagesEventBusStatus,
 } from '#/state/messages/events/types'
 
+// メッセージイベントバス専用ログインスタンス - DMエージェントのログ出力用
 const logger = Logger.create(Logger.Context.DMsAgent)
 
+/**
+ * メッセージイベントバスクラス - リアルタイムメッセージイベントの配信と管理
+ * Message event bus class - manages real-time message event delivery and distribution
+ * 
+ * AT Protocolのメッセージログを定期的にポーリングし、新しいイベントを検出して購読者に配信
+ * Periodically polls AT Protocol message logs, detects new events and delivers them to subscribers
+ */
 export class MessagesEventBus {
+  // 内部インスタンスID - デバッグとログ出力用の一意識別子
   private id: string
 
-  private agent: BskyAgent
-  private emitter = new EventEmitter<{event: [MessagesEventBusEvent]}>()
+  // AT Protocolエージェントとイベントエミッター
+  private agent: BskyAgent // APIクライアントインスタンス / API client instance
+  private emitter = new EventEmitter<{event: [MessagesEventBusEvent]}>() // イベント配信システム / Event delivery system
 
-  private status: MessagesEventBusStatus = MessagesEventBusStatus.Initializing
-  private latestRev: string | undefined = undefined
-  private pollInterval = DEFAULT_POLL_INTERVAL
-  private requestedPollIntervals: Map<string, number> = new Map()
+  // イベントバスの状態管理
+  private status: MessagesEventBusStatus = MessagesEventBusStatus.Initializing // 初期状態は初期化中 / Initial state is initializing
+  private latestRev: string | undefined = undefined // 最新リビジョン番号 - 差分更新用 / Latest revision number for incremental updates
+  private pollInterval = DEFAULT_POLL_INTERVAL // 現在のポーリング間隔 / Current polling interval
+  private requestedPollIntervals: Map<string, number> = new Map() // リクエストされたポーリング間隔の管理 / Management of requested polling intervals
 
+  /**
+   * メッセージイベントバスのコンストラクタ
+   * Constructor for message event bus
+   * 
+   * @param params - 初期化パラメータ / Initialization parameters
+   */
   constructor(params: MessagesEventBusParams) {
+    // デバッグ用の短いランダムID生成
     this.id = nanoid(3)
+    // AT Protocolエージェントを設定
     this.agent = params.agent
 
+    // 初期化処理を開始
     this.init()
   }
 
+  /**
+   * ポーリング間隔のリクエスト - 特定のコンポーネントが特定の更新頻度を要求
+   * Request polling interval - specific component requests specific update frequency
+   * 
+   * 複数のリクエストがある場合、最短間隔が採用される
+   * When multiple requests exist, the shortest interval is adopted
+   * 
+   * @param interval - 希望するポーリング間隔（ミリ秒） / Desired polling interval in milliseconds
+   * @returns リクエストをキャンセルする関数 / Function to cancel the request
+   */
   requestPollInterval(interval: number) {
+    // ユニークIDでリクエストを管理
     const id = nanoid()
     this.requestedPollIntervals.set(id, interval)
+    // ポーリング間隔の更新をディスパッチ
     this.dispatch({
       event: MessagesEventBusDispatchEvent.UpdatePoll,
     })
+    // キャンセル関数を返す
     return () => {
       this.requestedPollIntervals.delete(id)
       this.dispatch({
@@ -53,18 +96,38 @@ export class MessagesEventBus {
     }
   }
 
+  /**
+   * 最新リビジョン取得 - 現在の最新メッセージリビジョン番号を返す
+   * Get latest revision - returns current latest message revision number
+   * 
+   * @returns 最新リビジョン番号 / Latest revision number
+   */
   getLatestRev() {
     return this.latestRev
   }
 
+  /**
+   * イベントリスナー登録 - メッセージイベントを購読する
+   * Register event listener - subscribe to message events
+   * 
+   * 特定の会話IDを指定してフィルタリング可能
+   * Can filter by specific conversation ID
+   * 
+   * @param handler - イベントハンドラー関数 / Event handler function
+   * @param options - オプション（会話IDフィルター等） / Options (conversation ID filter, etc.)
+   * @returns 購諭をキャンセルする関数 / Function to cancel subscription
+   */
   on(
     handler: (event: MessagesEventBusEvent) => void,
     options: {
-      convoId?: string
+      convoId?: string // フィルターする会話ID / Conversation ID to filter
     },
   ) {
+    // イベントハンドラーをラップしてフィルタリング機能を追加
     const handle = (event: MessagesEventBusEvent) => {
+      // ログイベントで会話IDフィルターが指定されている場合
       if (event.type === 'logs' && options.convoId) {
+        // 指定された会話IDのログのみをフィルター
         const filteredLogs = event.logs.filter(log => {
           if ('convoId' in log && log.convoId === options.convoId) {
             return log.convoId === options.convoId
@@ -72,6 +135,7 @@ export class MessagesEventBus {
           return false
         })
 
+        // フィルターされたログが存在する場合のみハンドラーを呼び出し
         if (filteredLogs.length > 0) {
           handler({
             ...event,
@@ -79,27 +143,42 @@ export class MessagesEventBus {
           })
         }
       } else {
+        // フィルターなしの場合はそのままハンドラーを呼び出し
         handler(event)
       }
     }
 
+    // イベントリスナーを登録
     this.emitter.on('event', handle)
 
+    // 購諭キャンセル関数を返す
     return () => {
       this.emitter.off('event', handle)
     }
   }
 
+  /**
+   * バックグラウンド状態に変更 - アプリが非アクティブになった時の処理
+   * Change to background state - handle when app becomes inactive
+   */
   background() {
     logger.debug(`background`, {})
     this.dispatch({event: MessagesEventBusDispatchEvent.Background})
   }
 
+  /**
+   * 一時停止状態に変更 - イベントバスを一時的に停止
+   * Change to suspended state - temporarily stop event bus
+   */
   suspend() {
     logger.debug(`suspend`, {})
     this.dispatch({event: MessagesEventBusDispatchEvent.Suspend})
   }
 
+  /**
+   * アクティブ状態に復帰 - イベントバスを再開
+   * Return to active state - resume event bus
+   */
   resume() {
     logger.debug(`resume`, {})
     this.dispatch({event: MessagesEventBusDispatchEvent.Resume})
@@ -280,23 +359,33 @@ export class MessagesEventBus {
   }
 
   /*
-   * Polling
+   * ポーリング機能 - 定期的なメッセージログのチェック
+   * Polling functionality - periodic checking of message logs
    */
 
-  private isPolling = false
-  private pollIntervalRef: NodeJS.Timeout | undefined
+  private isPolling = false // ポーリング実行中フラグ / Flag indicating polling in progress
+  private pollIntervalRef: NodeJS.Timeout | undefined // ポーリングタイマーの参照 / Reference to polling timer
 
+  /**
+   * ポーリング間隔の算出 - 現在の状態とリクエストに基づいて最適な間隔を決定
+   * Calculate polling interval - determine optimal interval based on current state and requests
+   * 
+   * @returns ポーリング間隔（ミリ秒） / Polling interval in milliseconds
+   */
   private getPollInterval() {
     switch (this.status) {
       case MessagesEventBusStatus.Ready: {
+        // アクティブ状態: リクエストされた間隔の中で最短を採用
         const requested = Array.from(this.requestedPollIntervals.values())
         const lowest = Math.min(DEFAULT_POLL_INTERVAL, ...requested)
         return lowest
       }
       case MessagesEventBusStatus.Backgrounded: {
+        // バックグラウンド状態: バッテリー節約のため長い間隔を使用
         return BACKGROUND_POLL_INTERVAL
       }
       default:
+        // その他: デフォルト間隔を使用
         return DEFAULT_POLL_INTERVAL
     }
   }

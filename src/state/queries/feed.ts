@@ -1,75 +1,90 @@
+// Reactフック関連 / React hooks related
 import {useCallback, useEffect, useMemo, useRef} from 'react'
+// AT Protocol API型定義とユーティリティ / AT Protocol API types and utilities
 import {
-  type AppBskyActorDefs,
-  type AppBskyFeedDefs,
-  type AppBskyGraphDefs,
-  type AppBskyUnspeccedGetPopularFeedGenerators,
-  AtUri,
-  moderateFeedGenerator,
-  RichText,
+  type AppBskyActorDefs, // アクター（ユーザー）定義型 / Actor (user) definition types
+  type AppBskyFeedDefs, // フィード定義型 / Feed definition types
+  type AppBskyGraphDefs, // グラフ（リスト等）定義型 / Graph (lists etc.) definition types
+  type AppBskyUnspeccedGetPopularFeedGenerators, // 人気フィード取得API型 / Popular feeds API types
+  AtUri, // AT URI パーサー / AT URI parser
+  moderateFeedGenerator, // フィードモデレーション関数 / Feed moderation function
+  RichText, // リッチテキスト処理 / Rich text processing
 } from '@atproto/api'
+// TanStack Query（データ取得・キャッシュライブラリ） / TanStack Query (data fetching & caching library)
 import {
-  type InfiniteData,
-  keepPreviousData,
-  type QueryClient,
-  type QueryKey,
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
+  type InfiniteData, // 無限スクロールデータ型 / Infinite scroll data type
+  keepPreviousData, // 前のデータを保持する関数 / Function to keep previous data
+  type QueryClient, // クエリクライアント型 / Query client type
+  type QueryKey, // クエリキー型 / Query key type
+  useInfiniteQuery, // 無限スクロールクエリフック / Infinite scroll query hook
+  useMutation, // データ更新フック / Data mutation hook
+  useQuery, // データ取得フック / Data fetching hook
+  useQueryClient, // クエリクライアント取得フック / Query client access hook
 } from '@tanstack/react-query'
 
-import {DISCOVER_FEED_URI, DISCOVER_SAVED_FEED} from '#/lib/constants'
-import {sanitizeDisplayName} from '#/lib/strings/display-names'
-import {sanitizeHandle} from '#/lib/strings/handles'
-import {STALE} from '#/state/queries'
-import {RQKEY as listQueryKey} from '#/state/queries/list'
-import {usePreferencesQuery} from '#/state/queries/preferences'
-import {useAgent, useSession} from '#/state/session'
-import {router} from '#/routes'
-import {useModerationOpts} from '../preferences/moderation-opts'
-import {type FeedDescriptor} from './post-feed'
-import {precacheResolvedUri} from './resolve-uri'
+// アプリ定数とユーティリティ / App constants and utilities
+import {DISCOVER_FEED_URI, DISCOVER_SAVED_FEED} from '#/lib/constants' // ディスカバーフィード定数 / Discover feed constants
+import {sanitizeDisplayName} from '#/lib/strings/display-names' // 表示名サニタイズ / Display name sanitization
+import {sanitizeHandle} from '#/lib/strings/handles' // ハンドルサニタイズ / Handle sanitization
+// クエリ関連 / Query related
+import {STALE} from '#/state/queries' // キャッシュ有効期限定数 / Cache stale time constants
+import {RQKEY as listQueryKey} from '#/state/queries/list' // リストクエリキー / List query key
+import {usePreferencesQuery} from '#/state/queries/preferences' // ユーザー設定クエリ / User preferences query
+// セッションとナビゲーション / Session and navigation
+import {useAgent, useSession} from '#/state/session' // エージェントとセッション管理 / Agent and session management
+import {router} from '#/routes' // ルーター / Router
+// モデレーションとフィード関連 / Moderation and feed related
+import {useModerationOpts} from '../preferences/moderation-opts' // モデレーション設定 / Moderation settings
+import {type FeedDescriptor} from './post-feed' // フィード識別子型 / Feed descriptor type
+import {precacheResolvedUri} from './resolve-uri' // URI解決結果プリキャッシュ / Resolved URI precaching
 
+/**
+ * フィードジェネレーター情報型 / Feed generator information type
+ * アルゴリズムフィードの詳細情報を格納 / Stores detailed information about algorithmic feeds
+ */
 export type FeedSourceFeedInfo = {
-  type: 'feed'
-  view?: AppBskyFeedDefs.GeneratorView
-  uri: string
-  feedDescriptor: FeedDescriptor
-  route: {
+  type: 'feed' // タイプ: フィード / Type: feed
+  view?: AppBskyFeedDefs.GeneratorView // APIからのビューデータ / View data from API
+  uri: string // フィードURI / Feed URI
+  feedDescriptor: FeedDescriptor // フィード識別子 / Feed descriptor
+  route: { // ルーティング情報 / Routing information
     href: string
     name: string
     params: Record<string, string>
   }
-  cid: string
-  avatar: string | undefined
-  displayName: string
-  description: RichText
-  creatorDid: string
-  creatorHandle: string
-  likeCount: number | undefined
-  acceptsInteractions?: boolean
-  likeUri: string | undefined
-  contentMode: AppBskyFeedDefs.GeneratorView['contentMode']
+  cid: string // コンテントID / Content ID
+  avatar: string | undefined // アバター画像URL / Avatar image URL
+  displayName: string // 表示名 / Display name
+  description: RichText // 説明テキスト / Description text
+  creatorDid: string // 作成者DID / Creator DID
+  creatorHandle: string // 作成者ハンドル / Creator handle
+  likeCount: number | undefined // いいね数 / Like count
+  acceptsInteractions?: boolean // インタラクション可能か / Accepts interactions
+  likeUri: string | undefined // いいねURI / Like URI
+  contentMode: AppBskyFeedDefs.GeneratorView['contentMode'] // コンテンツモード / Content mode
 }
 
+/**
+ * リスト情報型 / List information type
+ * ユーザーリストの詳細情報を格納 / Stores detailed information about user lists
+ */
 export type FeedSourceListInfo = {
-  type: 'list'
-  view?: AppBskyGraphDefs.ListView
-  uri: string
-  feedDescriptor: FeedDescriptor
-  route: {
+  type: 'list' // タイプ: リスト / Type: list
+  view?: AppBskyGraphDefs.ListView // APIからのビューデータ / View data from API
+  uri: string // リストURI / List URI
+  feedDescriptor: FeedDescriptor // フィード識別子 / Feed descriptor
+  route: { // ルーティング情報 / Routing information
     href: string
     name: string
     params: Record<string, string>
   }
-  cid: string
-  avatar: string | undefined
-  displayName: string
-  description: RichText
-  creatorDid: string
-  creatorHandle: string
-  contentMode: undefined
+  cid: string // コンテンツID / Content ID
+  avatar: string | undefined // アバター画像URL / Avatar image URL
+  displayName: string // 表示名 / Display name
+  description: RichText // 説明テキスト / Description text
+  creatorDid: string // 作成者DID / Creator DID
+  creatorHandle: string // 作成者ハンドル / Creator handle
+  contentMode: undefined // コンテンツモード（リストでは未定義） / Content mode (undefined for lists)
 }
 
 export type FeedSourceInfo = FeedSourceFeedInfo | FeedSourceListInfo
@@ -169,20 +184,26 @@ export function getAvatarTypeFromUri(uri: string) {
   return getFeedTypeFromUri(uri) === 'feed' ? 'algo' : 'list'
 }
 
+/**
+ * フィードソース（フィードまたはリスト）の情報を取得するフック / Hook to fetch feed source (feed or list) information
+ * @param uri フィードまたはリストのURI / Feed or list URI
+ */
 export function useFeedSourceInfoQuery({uri}: {uri: string}) {
-  const type = getFeedTypeFromUri(uri)
-  const agent = useAgent()
+  const type = getFeedTypeFromUri(uri) // URIからタイプを判定 / Determine type from URI
+  const agent = useAgent() // Bluesky APIエージェント取得 / Get Bluesky API agent
 
   return useQuery({
-    staleTime: STALE.INFINITY,
-    queryKey: feedSourceInfoQueryKey({uri}),
+    staleTime: STALE.INFINITY, // 無期限キャッシュ / Infinite cache
+    queryKey: feedSourceInfoQueryKey({uri}), // クエリキー / Query key
     queryFn: async () => {
       let view: FeedSourceInfo
 
       if (type === 'feed') {
+        // フィードジェネレーターの情報を取得 / Fetch feed generator information
         const res = await agent.app.bsky.feed.getFeedGenerator({feed: uri})
         view = hydrateFeedGenerator(res.data.view)
       } else {
+        // リストの情報を取得 / Fetch list information
         const res = await agent.app.bsky.graph.getList({
           list: uri,
           limit: 1,

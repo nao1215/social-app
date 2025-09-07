@@ -1,62 +1,84 @@
+// Reactフック関連 / React hooks related
 import {useCallback} from 'react'
+// AT Protocol API型定義とクライアント / AT Protocol API types and client
 import {
-  type AppBskyActorDefs,
-  type AppBskyActorGetProfile,
-  type AppBskyActorGetProfiles,
-  type AppBskyActorProfile,
-  AtUri,
-  type BskyAgent,
-  type ComAtprotoRepoUploadBlob,
-  type Un$Typed,
+  type AppBskyActorDefs, // アクター（ユーザー）定義型 / Actor (user) definition types
+  type AppBskyActorGetProfile, // プロフィール取得API型 / Profile fetch API types
+  type AppBskyActorGetProfiles, // 複数プロフィール取得API型 / Multiple profiles fetch API types
+  type AppBskyActorProfile, // プロフィールレコード型 / Profile record type
+  AtUri, // AT URI パーサー / AT URI parser
+  type BskyAgent, // Blueskyエージェント型 / Bluesky agent type
+  type ComAtprotoRepoUploadBlob, // ファイルアップロード型 / File upload types
+  type Un$Typed, // 型なしオブジェクト / Untyped object
 } from '@atproto/api'
+// TanStack Query（データ取得・キャッシュライブラリ） / TanStack Query (data fetching & caching library)
 import {
-  keepPreviousData,
-  type QueryClient,
-  useMutation,
-  useQuery,
-  useQueryClient,
+  keepPreviousData, // 前のデータを保持する関数 / Function to keep previous data
+  type QueryClient, // クエリクライアント型 / Query client type
+  useMutation, // データ更新フック / Data mutation hook
+  useQuery, // データ取得フック / Data fetching hook
+  useQueryClient, // クエリクライアント取得フック / Query client access hook
 } from '@tanstack/react-query'
 
-import {uploadBlob} from '#/lib/api'
-import {until} from '#/lib/async/until'
-import {useToggleMutationQueue} from '#/lib/hooks/useToggleMutationQueue'
-import {logEvent, type LogEvents, toClout} from '#/lib/statsig/statsig'
-import {updateProfileShadow} from '#/state/cache/profile-shadow'
-import {type Shadow} from '#/state/cache/types'
-import {type ImageMeta} from '#/state/gallery'
-import {STALE} from '#/state/queries'
-import {resetProfilePostsQueries} from '#/state/queries/post-feed'
+// API 関数とユーティリティ / API functions and utilities
+import {uploadBlob} from '#/lib/api' // ファイルアップロード関数 / File upload function
+import {until} from '#/lib/async/until' // 非同期処理ユーティリティ / Async processing utility
+import {useToggleMutationQueue} from '#/lib/hooks/useToggleMutationQueue' // トグル操作キューフック / Toggle operation queue hook
+import {logEvent, type LogEvents, toClout} from '#/lib/statsig/statsig' // ログ収集と影響力計算 / Logging and influence calculation
+import {updateProfileShadow} from '#/state/cache/profile-shadow' // プロフィールキャッシュ更新 / Profile cache update
+import {type Shadow} from '#/state/cache/types' // シャドウキャッシュ型定義 / Shadow cache type definitions
+import {type ImageMeta} from '#/state/gallery' // 画像メタデータ型 / Image metadata type
+import {STALE} from '#/state/queries' // キャッシュ有効期限定数 / Cache stale time constants
+import {resetProfilePostsQueries} from '#/state/queries/post-feed' // プロフィール投稿クエリリセット / Profile posts query reset
 import {
-  unstableCacheProfileView,
-  useUnstableProfileViewCache,
+  unstableCacheProfileView, // 不安定プロフィールキャッシュ / Unstable profile cache
+  useUnstableProfileViewCache, // 不安定プロフィールキャッシュフック / Unstable profile cache hook
 } from '#/state/queries/unstable-profile-cache'
-import {useUpdateProfileVerificationCache} from '#/state/queries/verification/useUpdateProfileVerificationCache'
-import {useAgent, useSession} from '#/state/session'
-import * as userActionHistory from '#/state/userActionHistory'
-import type * as bsky from '#/types/bsky'
+import {useUpdateProfileVerificationCache} from '#/state/queries/verification/useUpdateProfileVerificationCache' // プロフィール証明キャッシュ更新 / Profile verification cache update
+import {useAgent, useSession} from '#/state/session' // エージェントとセッション管理 / Agent and session management
+import * as userActionHistory from '#/state/userActionHistory' // ユーザー行動履歴 / User action history
+import type * as bsky from '#/types/bsky' // Bluesky型定義 / Bluesky type definitions
 import {
-  ProgressGuideAction,
-  useProgressGuideControls,
+  ProgressGuideAction, // 進捗ガイドアクション / Progress guide actions
+  useProgressGuideControls, // 進捗ガイドコントロール / Progress guide controls
 } from '../shell/progress-guide'
-import {RQKEY_ROOT as RQKEY_LIST_CONVOS} from './messages/list-conversations'
-import {RQKEY as RQKEY_MY_BLOCKED} from './my-blocked-accounts'
-import {RQKEY as RQKEY_MY_MUTED} from './my-muted-accounts'
+// 関連クエリキー / Related query keys
+import {RQKEY_ROOT as RQKEY_LIST_CONVOS} from './messages/list-conversations' // 会話リストクエリキー / Conversations list query key
+import {RQKEY as RQKEY_MY_BLOCKED} from './my-blocked-accounts' // ブロックアカウントクエリキー / Blocked accounts query key
+import {RQKEY as RQKEY_MY_MUTED} from './my-muted-accounts' // ミュートアカウントクエリキー / Muted accounts query key
 
+// 不安定プロフィールキャッシュの再エクスポート / Re-export unstable profile cache
 export * from '#/state/queries/unstable-profile-cache'
 /**
  * @deprecated use {@link unstableCacheProfileView} instead
+ * @deprecated 代わりに {@link unstableCacheProfileView} を使用してください
  */
 export const precacheProfile = unstableCacheProfileView
 
-const RQKEY_ROOT = 'profile'
+// クエリキーの定義 / Query key definitions
+const RQKEY_ROOT = 'profile' // プロフィールクエリのルートキー / Profile query root key
+/**
+ * 個別プロフィール用クエリキー生成関数 / Individual profile query key generator
+ * @param did ユーザーDID / User DID
+ */
 export const RQKEY = (did: string) => [RQKEY_ROOT, did]
 
-export const profilesQueryKeyRoot = 'profiles'
+// 複数プロフィールクエリキー / Multiple profiles query keys
+export const profilesQueryKeyRoot = 'profiles' // プロフィール一括取得のルートキー / Profiles batch fetch root key
+/**
+ * ハンドルに基づく複数プロフィールクエリキー / Multiple profiles query key based on handles
+ * @param handles ユーザーハンドルの配列 / Array of user handles
+ */
 export const profilesQueryKey = (handles: string[]) => [
   profilesQueryKeyRoot,
   handles,
 ]
 
+/**
+ * プロフィール情報を取得するフック / Hook for fetching profile information
+ * @param did ユーザーDID / User DID
+ * @param staleTime キャッシュ有効期限（デフォルト: 15秒） / Cache stale time (default: 15 seconds)
+ */
 export function useProfileQuery({
   did,
   staleTime = STALE.SECONDS.FIFTEEN,
@@ -64,28 +86,36 @@ export function useProfileQuery({
   did: string | undefined
   staleTime?: number
 }) {
-  const agent = useAgent()
-  const {getUnstableProfile} = useUnstableProfileViewCache()
+  const agent = useAgent() // Bluesky APIエージェント取得 / Get Bluesky API agent
+  const {getUnstableProfile} = useUnstableProfileViewCache() // 不安定キャッシュからのプロフィール取得 / Get profile from unstable cache
   return useQuery<AppBskyActorDefs.ProfileViewDetailed>({
-    // WARNING
-    // this staleTime is load-bearing
+    // 警告: このstaleTimeは重要
+    // これを削除するUIが無限ループする
+    // WARNING: this staleTime is load-bearing
     // if you remove it, the UI infinite-loops
     // -prf
     staleTime,
-    refetchOnWindowFocus: true,
-    queryKey: RQKEY(did ?? ''),
+    refetchOnWindowFocus: true, // ウィンドウフォーカス時に再取得 / Refetch on window focus
+    queryKey: RQKEY(did ?? ''), // クエリキー / Query key
     queryFn: async () => {
+      // APIからプロフィールデータを取得 / Fetch profile data from API
       const res = await agent.getProfile({actor: did ?? ''})
       return res.data
     },
     placeholderData: () => {
+      // プレースホルダーデータとして不安定キャッシュを使用 / Use unstable cache as placeholder data
       if (!did) return
       return getUnstableProfile(did) as AppBskyActorDefs.ProfileViewDetailed
     },
-    enabled: !!did,
+    enabled: !!did, // DIDがある場合のみ有効 / Only enabled when DID is available
   })
 }
 
+/**
+ * 複数のプロフィールを一括取得するフック / Hook for fetching multiple profiles at once
+ * @param handles ユーザーハンドルの配列 / Array of user handles
+ * @param maintainData 前のデータを保持するか / Whether to maintain previous data
+ */
 export function useProfilesQuery({
   handles,
   maintainData,
@@ -93,26 +123,32 @@ export function useProfilesQuery({
   handles: string[]
   maintainData?: boolean
 }) {
-  const agent = useAgent()
+  const agent = useAgent() // Bluesky APIエージェント取得 / Get Bluesky API agent
   return useQuery({
-    staleTime: STALE.MINUTES.FIVE,
-    queryKey: profilesQueryKey(handles),
+    staleTime: STALE.MINUTES.FIVE, // 5分間キャッシュを保持 / Keep cache for 5 minutes
+    queryKey: profilesQueryKey(handles), // ハンドルベースのクエリキー / Handle-based query key
     queryFn: async () => {
+      // 複数のプロフィールを一括取得 / Batch fetch multiple profiles
       const res = await agent.getProfiles({actors: handles})
       return res.data
     },
-    placeholderData: maintainData ? keepPreviousData : undefined,
+    placeholderData: maintainData ? keepPreviousData : undefined, // データ保持設定 / Data persistence setting
   })
 }
 
+/**
+ * プロフィールを事前取得する関数を返すフック / Hook that returns a function to prefetch profiles
+ * ユーザーがプロフィールを表示する前にデータをプリロードしてUXを向上 / Preload data before user views profile to improve UX
+ */
 export function usePrefetchProfileQuery() {
-  const agent = useAgent()
-  const queryClient = useQueryClient()
+  const agent = useAgent() // Bluesky APIエージェント取得 / Get Bluesky API agent
+  const queryClient = useQueryClient() // クエリクライアント取得 / Get query client
   const prefetchProfileQuery = useCallback(
     async (did: string) => {
+      // 指定DIDのプロフィールを事前取得 / Prefetch profile for specified DID
       await queryClient.prefetchQuery({
-        staleTime: STALE.SECONDS.THIRTY,
-        queryKey: RQKEY(did),
+        staleTime: STALE.SECONDS.THIRTY, // 30秒間キャッシュを保持 / Keep cache for 30 seconds
+        queryKey: RQKEY(did), // プロフィールクエリキー / Profile query key
         queryFn: async () => {
           const res = await agent.getProfile({actor: did || ''})
           return res.data
@@ -124,21 +160,28 @@ export function usePrefetchProfileQuery() {
   return prefetchProfileQuery
 }
 
+/**
+ * プロフィール更新パラメーターインターフェース / Profile update parameters interface
+ */
 interface ProfileUpdateParams {
-  profile: AppBskyActorDefs.ProfileViewDetailed
-  updates:
+  profile: AppBskyActorDefs.ProfileViewDetailed // 現在のプロフィールデータ / Current profile data
+  updates: // 更新データ（オブジェクトまたは関数） / Update data (object or function)
     | Un$Typed<AppBskyActorProfile.Record>
     | ((
         existing: Un$Typed<AppBskyActorProfile.Record>,
       ) => Un$Typed<AppBskyActorProfile.Record>)
-  newUserAvatar?: ImageMeta | undefined | null
-  newUserBanner?: ImageMeta | undefined | null
-  checkCommitted?: (res: AppBskyActorGetProfile.Response) => boolean
+  newUserAvatar?: ImageMeta | undefined | null // 新しいアバター画像 / New avatar image
+  newUserBanner?: ImageMeta | undefined | null // 新しいバナー画像 / New banner image
+  checkCommitted?: (res: AppBskyActorGetProfile.Response) => boolean // 更新確認関数 / Update confirmation function
 }
+/**
+ * プロフィール情報を更新するミューテーションフック / Hook for updating profile information
+ * アバター、バナー、表示名、説明等の更新を行う / Handles updates for avatar, banner, display name, description, etc.
+ */
 export function useProfileUpdateMutation() {
-  const queryClient = useQueryClient()
-  const agent = useAgent()
-  const updateProfileVerificationCache = useUpdateProfileVerificationCache()
+  const queryClient = useQueryClient() // クエリクライアント取得 / Get query client
+  const agent = useAgent() // Bluesky APIエージェント取得 / Get Bluesky API agent
+  const updateProfileVerificationCache = useUpdateProfileVerificationCache() // 認証キャッシュ更新 / Update verification cache
   return useMutation<void, Error, ProfileUpdateParams>({
     mutationFn: async ({
       profile,

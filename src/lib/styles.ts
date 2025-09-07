@@ -1,17 +1,27 @@
+// React Nativeのスタイル関連のユーティリティとタイプ定義をインポート
+// Imports React Native style utilities and type definitions
 import {
-  Dimensions,
-  type StyleProp,
-  StyleSheet,
-  type TextStyle,
+  Dimensions, // デバイスの画面サイズ情報を取得するAPI / API to get device screen dimensions
+  type StyleProp, // スタイルプロパティの型定義 / Type definition for style properties
+  StyleSheet, // スタイルシートを作成するためのAPI / API for creating stylesheets
+  type TextStyle, // テキストスタイルの型定義 / Type definition for text styles
 } from 'react-native'
 
+// プラットフォーム検出ユーティリティをインポート
+// Import platform detection utility
 import {isWeb} from '#/platform/detection'
+// テーマとタイポグラフィの型定義をインポート
+// Import theme and typography type definitions
 import {type Theme, type TypographyVariant} from './ThemeContext'
 
 // 1 is lightest, 2 is light, 3 is mid, 4 is dark, 5 is darkest
+// カラーパレット定義（1が最も明るく、5が最も暗い）
 /**
  * @deprecated use ALF colors instead
+ * @deprecated 代わりにALFカラーを使用してください
  */
+// アプリケーション全体で使用する色の定数定義
+// Color constant definitions used throughout the application
 export const colors = {
   white: '#ffffff',
   black: '#000000',
@@ -65,46 +75,51 @@ export const colors = {
   like: '#ec4899',
 }
 
+// グラデーション色の定義（ボタンやUI要素で使用）
+// Gradient color definitions used for buttons and UI elements
 export const gradients = {
-  blueLight: {start: '#5A71FA', end: colors.blue3}, // buttons
-  blue: {start: '#5E55FB', end: colors.blue3}, // fab
-  blueDark: {start: '#5F45E0', end: colors.blue3}, // avis, banner
+  blueLight: {start: '#5A71FA', end: colors.blue3}, // buttons / ボタン用
+  blue: {start: '#5E55FB', end: colors.blue3}, // fab / フローティングアクションボタン用
+  blueDark: {start: '#5F45E0', end: colors.blue3}, // avis, banner / アバターやバナー用
 }
 
 /**
  * @deprecated use atoms from `#/alf`
+ * @deprecated `#/alf`のatomsを使用してください
  */
+// 再利用可能なスタイルオブジェクトの定義
+// Reusable style object definitions
 export const s = StyleSheet.create({
-  // helpers
-  footerSpacer: {height: 100},
-  contentContainer: {paddingBottom: 200},
-  contentContainerExtra: {paddingBottom: 300},
-  border0: {borderWidth: 0},
-  border1: {borderWidth: 1},
-  borderTop1: {borderTopWidth: 1},
-  borderRight1: {borderRightWidth: 1},
-  borderBottom1: {borderBottomWidth: 1},
-  borderLeft1: {borderLeftWidth: 1},
-  hidden: {display: 'none'},
-  dimmed: {opacity: 0.5},
+  // helpers / ヘルパースタイル
+  footerSpacer: {height: 100}, // フッターのスペーサー / Footer spacer
+  contentContainer: {paddingBottom: 200}, // コンテンツコンテナ / Content container
+  contentContainerExtra: {paddingBottom: 300}, // 拡張コンテンツコンテナ / Extended content container
+  border0: {borderWidth: 0}, // ボーダーなし / No border
+  border1: {borderWidth: 1}, // 1pxボーダー / 1px border
+  borderTop1: {borderTopWidth: 1}, // 上ボーダー1px / Top border 1px
+  borderRight1: {borderRightWidth: 1}, // 右ボーダー1px / Right border 1px
+  borderBottom1: {borderBottomWidth: 1}, // 下ボーダー1px / Bottom border 1px
+  borderLeft1: {borderLeftWidth: 1}, // 左ボーダー1px / Left border 1px
+  hidden: {display: 'none'}, // 非表示 / Hidden
+  dimmed: {opacity: 0.5}, // 半透明 / Semi-transparent
 
-  // font weights
-  fw600: {fontWeight: '600'},
-  bold: {fontWeight: '600'},
-  fw500: {fontWeight: '600'},
-  semiBold: {fontWeight: '600'},
-  fw400: {fontWeight: '400'},
-  normal: {fontWeight: '400'},
-  fw300: {fontWeight: '400'},
-  light: {fontWeight: '400'},
+  // font weights / フォントウェイト
+  fw600: {fontWeight: '600'}, // セミボールド / Semi-bold
+  bold: {fontWeight: '600'}, // ボールド / Bold
+  fw500: {fontWeight: '600'}, // ミディアム / Medium
+  semiBold: {fontWeight: '600'}, // セミボールド / Semi-bold
+  fw400: {fontWeight: '400'}, // ノーマル / Normal
+  normal: {fontWeight: '400'}, // ノーマル / Normal
+  fw300: {fontWeight: '400'}, // ライト / Light
+  light: {fontWeight: '400'}, // ライト / Light
 
-  // text decoration
-  underline: {textDecorationLine: 'underline'},
+  // text decoration / テキスト装飾
+  underline: {textDecorationLine: 'underline'}, // 下線 / Underline
 
-  // font variants
-  tabularNum: {fontVariant: ['tabular-nums']},
+  // font variants / フォントバリアント
+  tabularNum: {fontVariant: ['tabular-nums']}, // 等幅数字 / Tabular numbers
 
-  // font sizes
+  // font sizes / フォントサイズ
   f9: {fontSize: 9},
   f10: {fontSize: 10},
   f11: {fontSize: 11},
@@ -116,7 +131,7 @@ export const s = StyleSheet.create({
   f17: {fontSize: 17},
   f18: {fontSize: 18},
 
-  // line heights
+  // line heights / 行の高さ
   ['lh13-1']: {lineHeight: 13},
   ['lh13-1.3']: {lineHeight: 16.9}, // 1.3 of 13px
   ['lh14-1']: {lineHeight: 14},
@@ -130,7 +145,7 @@ export const s = StyleSheet.create({
   ['lh18-1']: {lineHeight: 18},
   ['lh18-1.3']: {lineHeight: 23.4}, // 1.3 of 18px
 
-  // margins
+  // margins / マージン
   mr2: {marginRight: 2},
   mr5: {marginRight: 5},
   mr10: {marginRight: 10},
@@ -148,7 +163,7 @@ export const s = StyleSheet.create({
   mb10: {marginBottom: 10},
   mb20: {marginBottom: 20},
 
-  // paddings
+  // paddings / パディング
   p2: {padding: 2},
   p5: {padding: 5},
   p10: {padding: 10},
@@ -171,33 +186,33 @@ export const s = StyleSheet.create({
   pb20: {paddingBottom: 20},
   px5: {paddingHorizontal: 5},
 
-  // flex
-  flexRow: {flexDirection: 'row'},
-  flexCol: {flexDirection: 'column'},
-  flex1: {flex: 1},
-  flexGrow1: {flexGrow: 1},
-  alignCenter: {alignItems: 'center'},
-  alignBaseline: {alignItems: 'baseline'},
-  justifyCenter: {justifyContent: 'center'},
+  // flex / フレックスレイアウト
+  flexRow: {flexDirection: 'row'}, // 横並び / Horizontal layout
+  flexCol: {flexDirection: 'column'}, // 縦並び / Vertical layout
+  flex1: {flex: 1}, // フレックス1 / Flex 1
+  flexGrow1: {flexGrow: 1}, // フレックスグロー1 / Flex grow 1
+  alignCenter: {alignItems: 'center'}, // 中央寄せ / Center alignment
+  alignBaseline: {alignItems: 'baseline'}, // ベースライン寄せ / Baseline alignment
+  justifyCenter: {justifyContent: 'center'}, // 中央寄せ（主軸） / Center justification
 
-  // position
-  absolute: {position: 'absolute'},
+  // position / ポジショニング
+  absolute: {position: 'absolute'}, // 絶対配置 / Absolute positioning
 
-  // dimensions
-  w100pct: {width: '100%'},
-  h100pct: {height: '100%'},
-  hContentRegion: isWeb ? {minHeight: '100%'} : {height: '100%'},
-  window: {
+  // dimensions / サイズ
+  w100pct: {width: '100%'}, // 幅100% / Width 100%
+  h100pct: {height: '100%'}, // 高さ100% / Height 100%
+  hContentRegion: isWeb ? {minHeight: '100%'} : {height: '100%'}, // コンテンツ領域の高さ / Content region height
+  window: { // ウィンドウサイズ / Window dimensions
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
   },
 
-  // text align
-  textLeft: {textAlign: 'left'},
-  textCenter: {textAlign: 'center'},
-  textRight: {textAlign: 'right'},
+  // text align / テキスト配置
+  textLeft: {textAlign: 'left'}, // 左寄せ / Left align
+  textCenter: {textAlign: 'center'}, // 中央寄せ / Center align
+  textRight: {textAlign: 'right'}, // 右寄せ / Right align
 
-  // colors
+  // colors / 色
   white: {color: colors.white},
   black: {color: colors.black},
 
@@ -241,20 +256,39 @@ export const s = StyleSheet.create({
   likeColor: {color: colors.like},
 })
 
+/**
+ * テーマに基づいて行の高さを計算するユーティリティ関数
+ * Utility function to calculate line height based on theme
+ * @param theme テーマオブジェクト / Theme object
+ * @param type タイポグラフィのバリアント / Typography variant
+ * @param height 高さの倍数 / Height multiplier
+ * @returns テキストスタイル / Text style
+ */
 export function lh(
   theme: Theme,
   type: TypographyVariant,
   height: number,
 ): TextStyle {
   return {
+    // フォントサイズに高さの倍数を掛けて行の高さを計算
+    // Calculate line height by multiplying font size with height multiplier
     lineHeight: Math.round((theme.typography[type].fontSize || 16) * height),
   }
 }
 
+/**
+ * スタイルを追加するユーティリティ関数
+ * Utility function to add styles
+ * @param base ベースとなるスタイル / Base style
+ * @param addedStyle 追加するスタイル / Style to add
+ * @returns 結合されたスタイル / Combined style
+ */
 export function addStyle<T>(
   base: StyleProp<T>,
   addedStyle: StyleProp<T>,
 ): StyleProp<T> {
+  // ベーススタイルが配列の場合は連結、そうでなければ新しい配列を作成
+  // If base style is an array, concatenate; otherwise create a new array
   if (Array.isArray(base)) {
     return base.concat([addedStyle])
   }

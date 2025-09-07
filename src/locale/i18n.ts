@@ -1,16 +1,20 @@
+// 低性能Android端末での検出が非常に遅いため、-forceを削除しないでください
+// https://github.com/formatjs/formatjs/issues/4463#issuecomment-2176070577
 // Don't remove -force from these because detection is VERY slow on low-end Android.
 // https://github.com/formatjs/formatjs/issues/4463#issuecomment-2176070577
-import '@formatjs/intl-locale/polyfill-force'
-import '@formatjs/intl-pluralrules/polyfill-force'
-import '@formatjs/intl-numberformat/polyfill-force'
-import '@formatjs/intl-pluralrules/locale-data/en'
-import '@formatjs/intl-numberformat/locale-data/en'
+import '@formatjs/intl-locale/polyfill-force'        // ロケールポリフィル（強制）
+import '@formatjs/intl-pluralrules/polyfill-force'   // 複数形ルールポリフィル（強制）
+import '@formatjs/intl-numberformat/polyfill-force'  // 数値フォーマットポリフィル（強制）
+import '@formatjs/intl-pluralrules/locale-data/en'   // 英語複数形ルール
+import '@formatjs/intl-numberformat/locale-data/en'  // 英語数値フォーマット
 
-import {useEffect} from 'react'
-import {i18n} from '@lingui/core'
+// React・i18n基本機能
+import {useEffect} from 'react'  // Reactエフェクト
+import {i18n} from '@lingui/core' // Lingui国際化コア
 
-import {sanitizeAppLanguageSetting} from '#/locale/helpers'
-import {AppLanguage} from '#/locale/languages'
+// ローカライゼーション機能
+import {sanitizeAppLanguageSetting} from '#/locale/helpers' // 言語設定サニタイズ
+import {AppLanguage} from '#/locale/languages'              // アプリ言語定義
 import {messages as messagesAn} from '#/locale/locales/an/messages'
 import {messages as messagesAst} from '#/locale/locales/ast/messages'
 import {messages as messagesCa} from '#/locale/locales/ca/messages'

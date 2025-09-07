@@ -1,48 +1,62 @@
-import {useCallback, useEffect, useState} from 'react'
-import {BackHandler, useWindowDimensions, View} from 'react-native'
-import {Drawer} from 'react-native-drawer-layout'
-import {SystemBars} from 'react-native-edge-to-edge'
-import {Gesture} from 'react-native-gesture-handler'
-import {useSafeAreaInsets} from 'react-native-safe-area-context'
-import {useNavigation, useNavigationState} from '@react-navigation/native'
+// React基本機能・UI
+import {useCallback, useEffect, useState} from 'react'                    // Reactフック
+import {BackHandler, useWindowDimensions, View} from 'react-native'      // React Native基本コンポーネント
+import {Drawer} from 'react-native-drawer-layout'                        // ドロワーレイアウト
+import {SystemBars} from 'react-native-edge-to-edge'                     // システムバー制御
+import {Gesture} from 'react-native-gesture-handler'                     // ジェスチャーハンドラー
+import {useSafeAreaInsets} from 'react-native-safe-area-context'         // セーフエリア
+import {useNavigation, useNavigationState} from '@react-navigation/native' // ナビゲーション
 
-import {useDedupe} from '#/lib/hooks/useDedupe'
-import {useIntentHandler} from '#/lib/hooks/useIntentHandler'
-import {useNotificationsHandler} from '#/lib/hooks/useNotificationHandler'
-import {useNotificationsRegistration} from '#/lib/notifications/notifications'
-import {isStateAtTabRoot} from '#/lib/routes/helpers'
-import {isAndroid, isIOS} from '#/platform/detection'
-import {useDialogFullyExpandedCountContext} from '#/state/dialogs'
-import {useGeolocationStatus} from '#/state/geolocation'
-import {useSession} from '#/state/session'
+// カスタムフック・ユーティリティ
+import {useDedupe} from '#/lib/hooks/useDedupe'                          // 重複処理防止
+import {useIntentHandler} from '#/lib/hooks/useIntentHandler'            // インテント処理
+import {useNotificationsHandler} from '#/lib/hooks/useNotificationHandler' // 通知ハンドラー
+import {useNotificationsRegistration} from '#/lib/notifications/notifications' // 通知登録
+import {isStateAtTabRoot} from '#/lib/routes/helpers'                    // ルート状態判定
+import {isAndroid, isIOS} from '#/platform/detection'                   // プラットフォーム判定
+
+// 状態管理
+import {useDialogFullyExpandedCountContext} from '#/state/dialogs'       // ダイアログ展開数
+import {useGeolocationStatus} from '#/state/geolocation'                 // 地理位置情報状態
+import {useSession} from '#/state/session'                               // セッション状態
 import {
   useIsDrawerOpen,
   useIsDrawerSwipeDisabled,
   useSetDrawerOpen,
-} from '#/state/shell'
-import {useCloseAnyActiveElement} from '#/state/util'
-import {Lightbox} from '#/view/com/lightbox/Lightbox'
-import {ModalsContainer} from '#/view/com/modals/Modal'
-import {ErrorBoundary} from '#/view/com/util/ErrorBoundary'
-import {atoms as a, select, useTheme} from '#/alf'
-import {setSystemUITheme} from '#/alf/util/systemUI'
-import {AgeAssuranceRedirectDialog} from '#/components/ageAssurance/AgeAssuranceRedirectDialog'
-import {BlockedGeoOverlay} from '#/components/BlockedGeoOverlay'
-import {EmailDialog} from '#/components/dialogs/EmailDialog'
-import {InAppBrowserConsentDialog} from '#/components/dialogs/InAppBrowserConsent'
-import {LinkWarningDialog} from '#/components/dialogs/LinkWarning'
-import {MutedWordsDialog} from '#/components/dialogs/MutedWords'
-import {SigninDialog} from '#/components/dialogs/Signin'
+} from '#/state/shell'                                                   // シェル状態管理
+import {useCloseAnyActiveElement} from '#/state/util'                    // アクティブ要素クローズ
+
+// ビューコンポーネント
+import {Lightbox} from '#/view/com/lightbox/Lightbox'                    // ライトボックス
+import {ModalsContainer} from '#/view/com/modals/Modal'                  // モーダルコンテナ
+import {ErrorBoundary} from '#/view/com/util/ErrorBoundary'              // エラーバウンダリ
+
+// デザインシステム・テーマ
+import {atoms as a, select, useTheme} from '#/alf'                       // Alfデザインシステム
+import {setSystemUITheme} from '#/alf/util/systemUI'                     // システムUIテーマ
+
+// ダイアログコンポーネント群
+import {AgeAssuranceRedirectDialog} from '#/components/ageAssurance/AgeAssuranceRedirectDialog' // 年齢確認リダイレクト
+import {BlockedGeoOverlay} from '#/components/BlockedGeoOverlay'          // 地理的ブロックオーバーレイ
+import {EmailDialog} from '#/components/dialogs/EmailDialog'             // メールダイアログ
+import {InAppBrowserConsentDialog} from '#/components/dialogs/InAppBrowserConsent' // アプリ内ブラウザ同意
+import {LinkWarningDialog} from '#/components/dialogs/LinkWarning'       // リンク警告ダイアログ
+import {MutedWordsDialog} from '#/components/dialogs/MutedWords'         // ミュート単語ダイアログ
+import {SigninDialog} from '#/components/dialogs/Signin'                 // サインインダイアログ
 import {
   Outlet as PolicyUpdateOverlayPortalOutlet,
   usePolicyUpdateContext,
-} from '#/components/PolicyUpdateOverlay'
-import {Outlet as PortalOutlet} from '#/components/Portal'
-import {RoutesContainer, TabsNavigator} from '#/Navigation'
-import {BottomSheetOutlet} from '../../../modules/bottom-sheet'
-import {updateActiveViewAsync} from '../../../modules/expo-bluesky-swiss-army/src/VisibilityView'
-import {Composer} from './Composer'
-import {DrawerContent} from './Drawer'
+} from '#/components/PolicyUpdateOverlay'                                // ポリシー更新オーバーレイ
+import {Outlet as PortalOutlet} from '#/components/Portal'               // ポータルアウトレット
+
+// ナビゲーション・モジュール
+import {RoutesContainer, TabsNavigator} from '#/Navigation'              // ナビゲーションコンテナ・タブナビゲーター
+import {BottomSheetOutlet} from '../../../modules/bottom-sheet'          // ボトムシートアウトレット
+import {updateActiveViewAsync} from '../../../modules/expo-bluesky-swiss-army/src/VisibilityView' // ビュー可視性更新
+
+// シェル内コンポーネント
+import {Composer} from './Composer'                                      // 投稿作成
+import {DrawerContent} from './Drawer'                                   // ドロワー内容
 
 function ShellInner() {
   const winDim = useWindowDimensions()

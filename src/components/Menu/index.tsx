@@ -1,53 +1,72 @@
+// Reactコアフック - 要素のクローン、フラグメント、バリデーション、メモ化
 import {cloneElement, Fragment, isValidElement, useMemo} from 'react'
+// React Native基本コンポーネントと型定義 - UI構築のため
 import {
-  Pressable,
-  type StyleProp,
-  type TextStyle,
-  View,
-  type ViewStyle,
+  Pressable,      // タッチ可能コンポーネント
+  type StyleProp, // スタイルプロパティ型
+  type TextStyle, // テキストスタイル型
+  View,           // 基本ビューコンポーネント
+  type ViewStyle, // ビュースタイル型
 } from 'react-native'
-import {msg, Trans} from '@lingui/macro'
-import {useLingui} from '@lingui/react'
+// Lingui国際化ライブラリ - メッセージの多言語対応
+import {msg, Trans} from '@lingui/macro'  // 翻訳メッセージマクロ
+import {useLingui} from '@lingui/react'   // Lingui Reactフック
+// React子要素をフラット化するユーティリティ - ネストされた子要素を一列化
 import flattenReactChildren from 'react-keyed-flatten-children'
 
+// プラットフォーム検出 - Android、iOS、ネイティブ環境の判定
 import {isAndroid, isIOS, isNative} from '#/platform/detection'
+// デザインシステム - スタイルとテーマ管理
 import {atoms as a, useTheme} from '#/alf'
+// ボタンコンポーネント - インタラクティブな操作用
 import {Button, ButtonText} from '#/components/Button'
+// ダイアログコンポーネント群 - メニューはダイアログとして表示
 import * as Dialog from '#/components/Dialog'
+// インタラクション状態フック - ホバー、フォーカス、プレス状態管理
 import {useInteractionState} from '#/components/hooks/useInteractionState'
+// メニューコンテキスト - メニュー内での状態共有
 import {
-  Context,
-  ItemContext,
-  useMenuContext,
-  useMenuItemContext,
+  Context,            // メニュー全体のコンテキスト
+  ItemContext,        // メニューアイテムのコンテキスト
+  useMenuContext,     // メニューコンテキスト取得フック
+  useMenuItemContext, // メニューアイテムコンテキスト取得フック
 } from '#/components/Menu/context'
+// メニューコンポーネントの型定義
 import {
-  type ContextType,
-  type GroupProps,
-  type ItemIconProps,
-  type ItemProps,
-  type ItemTextProps,
-  type TriggerProps,
+  type ContextType,    // コンテキスト型
+  type GroupProps,     // グループプロパティ型
+  type ItemIconProps,  // アイテムアイコンプロパティ型
+  type ItemProps,      // アイテムプロパティ型
+  type ItemTextProps,  // アイテムテキストプロパティ型
+  type TriggerProps,   // トリガープロパティ型
 } from '#/components/Menu/types'
+// タイポグラフィコンポーネント
 import {Text} from '#/components/Typography'
 
+// ダイアログ制御をメニュー制御としてエクスポート - メニューはダイアログをベースに構築
 export {
-  type DialogControlProps as MenuControlProps,
-  useDialogControl as useMenuControl,
+  type DialogControlProps as MenuControlProps, // メニュー制御プロパティ型
+  useDialogControl as useMenuControl,          // メニュー制御フック
 } from '#/components/Dialog'
 
+// メニューコンテキストフックをエクスポート
 export {useMenuContext}
 
+/**
+ * メニューのルートコンポーネント - メニュー全体のコンテキストを提供
+ * Menu root component providing context for the entire menu
+ */
 export function Root({
-  children,
-  control,
+  children, // 子要素
+  control,  // メニュー制御オブジェクト（オプション）
 }: React.PropsWithChildren<{
   control?: Dialog.DialogControlProps
 }>) {
-  const defaultControl = Dialog.useDialogControl()
+  const defaultControl = Dialog.useDialogControl() // デフォルトコントロールを作成
+  // メニューコンテキストをメモ化 - パフォーマンス最適化のため
   const context = useMemo<ContextType>(
     () => ({
-      control: control || defaultControl,
+      control: control || defaultControl, // 渡されたコントロールまたはデフォルトを使用
     }),
     [control, defaultControl],
   )
@@ -55,62 +74,74 @@ export function Root({
   return <Context.Provider value={context}>{children}</Context.Provider>
 }
 
+/**
+ * メニュートリガーコンポーネント - メニューを開くためのトリガー要素
+ * Menu trigger component for opening the menu
+ */
 export function Trigger({
-  children,
-  label,
-  role = 'button',
-  hint,
+  children,           // レンダープロパティ関数
+  label,             // アクセシビリティラベル
+  role = 'button',   // アクセシビリティロール（デフォルト: button）
+  hint,              // アクセシビリティヒント
 }: TriggerProps) {
-  const context = useMenuContext()
-  const {state: focused, onIn: onFocus, onOut: onBlur} = useInteractionState()
+  const context = useMenuContext()                                 // メニューコンテキスト取得
+  const {state: focused, onIn: onFocus, onOut: onBlur} = useInteractionState() // フォーカス状態管理
+  // プレス状態管理 - タッチ時の視覚フィードバックのため
   const {
     state: pressed,
     onIn: onPressIn,
     onOut: onPressOut,
   } = useInteractionState()
 
+  // レンダープロパティ関数にメニュー状態とプロパティを渡す
   return children({
-    isNative: true,
-    control: context.control,
+    isNative: true,              // ネイティブ環境であることを示す
+    control: context.control,    // メニュー制御オブジェクト
     state: {
-      hovered: false,
-      focused,
-      pressed,
+      hovered: false,            // ホバー状態（ネイティブでは常にfalse）
+      focused,                   // フォーカス状態
+      pressed,                   // プレス状態
     },
     props: {
-      ref: null,
-      onPress: context.control.open,
-      onFocus,
-      onBlur,
-      onPressIn,
-      onPressOut,
-      accessibilityHint: hint,
-      accessibilityLabel: label,
-      accessibilityRole: role,
+      ref: null,                           // 参照（ネイティブではnull）
+      onPress: context.control.open,       // メニューを開くハンドラー
+      onFocus,                            // フォーカスハンドラー
+      onBlur,                             // フォーカス喪失ハンドラー
+      onPressIn,                          // プレス開始ハンドラー
+      onPressOut,                         // プレス終了ハンドラー
+      accessibilityHint: hint,            // アクセシビリティヒント
+      accessibilityLabel: label,          // アクセシビリティラベル
+      accessibilityRole: role,            // アクセシビリティロール
     },
   })
 }
 
+/**
+ * メニューの外側コンポーネント - ダイアログとして表示されるメニューのコンテナ
+ * Menu outer component - container for the menu displayed as a dialog
+ */
 export function Outer({
-  children,
-  showCancel,
+  children,    // 子要素
+  showCancel,  // キャンセルボタンを表示するかどうか
 }: React.PropsWithChildren<{
   showCancel?: boolean
   style?: StyleProp<ViewStyle>
 }>) {
-  const context = useMenuContext()
-  const {_} = useLingui()
+  const context = useMenuContext() // メニューコンテキスト取得
+  const {_} = useLingui()          // 翻訳関数取得
 
   return (
     <Dialog.Outer
-      control={context.control}
-      nativeOptions={{preventExpansion: true}}>
-      <Dialog.Handle />
+      control={context.control}                           // メニュー制御オブジェクト
+      nativeOptions={{preventExpansion: true}}>          {/* メニューの自動展開を禁止 */}
+      <Dialog.Handle />  {/* ダイアログハンドル */}
       {/* Re-wrap with context since Dialogs are portal-ed to root */}
+      {/* ダイアログはルートにポータルされるため、コンテキストを再ラップ */}
       <Context.Provider value={context}>
-        <Dialog.ScrollableInner label={_(msg`Menu`)}>
-          <View style={[a.gap_lg]}>
+        <Dialog.ScrollableInner label={_(msg`Menu`)}> {/* スクロール可能なメニュー内部 */}
+          <View style={[a.gap_lg]}> {/* 大きなギャップでアイテムを配置 */}
             {children}
+            {/* ネイティブ環境でキャンセルボタンが有効な場合のみ表示 */}
             {isNative && showCancel && <Cancel />}
           </View>
         </Dialog.ScrollableInner>

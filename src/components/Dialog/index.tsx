@@ -1,27 +1,33 @@
+// Reactコアフック - 命令型ハンドルとref管理
 import React, {useImperativeHandle} from 'react'
+// React Native基本コンポーネントと型定義 - UI構築とイベント処理
 import {
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-  Pressable,
-  type ScrollView,
-  type StyleProp,
-  TextInput,
-  View,
-  type ViewStyle,
+  type NativeScrollEvent,      // ネイティブスクロールイベント型
+  type NativeSyntheticEvent,   // ネイティブ合成イベント型
+  Pressable,                  // タッチ可能コンポーネント
+  type ScrollView,            // スクロールビュー型
+  type StyleProp,             // スタイルプロパティ型
+  TextInput,                  // テキスト入力コンポーネント
+  View,                       // 基本ビューコンポーネント
+  type ViewStyle,             // ビュースタイル型
 } from 'react-native'
+// キーボード制御ライブラリ - キーボード表示時のレイアウト調整
 import {
-  KeyboardAwareScrollView,
-  useKeyboardHandler,
-  useReanimatedKeyboardAnimation,
+  KeyboardAwareScrollView,      // キーボード対応スクロールビュー
+  useKeyboardHandler,           // キーボードイベントハンドラー
+  useReanimatedKeyboardAnimation, // キーボードアニメーションフック
 } from 'react-native-keyboard-controller'
+// React Native Reanimated - 高性能アニメーションライブラリ
 import Animated, {
-  runOnJS,
-  type ScrollEvent,
-  useAnimatedStyle,
+  runOnJS,               // JSスレッドで関数実行
+  type ScrollEvent,      // スクロールイベント型
+  useAnimatedStyle,      // アニメーションスタイルフック
 } from 'react-native-reanimated'
+// セーフエリア管理 - ノッチやホームバー領域の取得
 import {useSafeAreaInsets} from 'react-native-safe-area-context'
-import {msg} from '@lingui/macro'
-import {useLingui} from '@lingui/react'
+// Lingui国際化ライブラリ - メッセージの多言語対応
+import {msg} from '@lingui/macro'    // 翻訳メッセージマクロ
+import {useLingui} from '@lingui/react' // Lingui Reactフック
 
 import {useEnableKeyboardController} from '#/lib/hooks/useEnableKeyboardController'
 import {ScrollProvider} from '#/lib/ScrollContext'
@@ -46,71 +52,89 @@ import {
 } from '../../../modules/bottom-sheet/src/BottomSheet.types'
 import {type BottomSheetNativeComponent} from '../../../modules/bottom-sheet/src/BottomSheetNativeComponent'
 
+// ダイアログ関連のコンテキストと制御フックをエクスポート
 export {useDialogContext, useDialogControl} from '#/components/Dialog/context'
+// ダイアログの共有コンポーネント、型、ユーティリティをエクスポート
 export * from '#/components/Dialog/shared'
 export * from '#/components/Dialog/types'
 export * from '#/components/Dialog/utils'
 
+// ダイアログ用のカスタマイズされたテキスト入力コンポーネント
 export const Input = createInput(TextInput)
 
+/**
+ * ダイアログの外側コンポーネント - ボトムシートとして表示されるメインコンテナ
+ * Outer dialog component - main container displayed as a bottom sheet
+ */
 export function Outer({
-  children,
-  control,
-  onClose,
-  nativeOptions,
-  testID,
+  children,      // 子要素
+  control,       // ダイアログ制御オブジェクト
+  onClose,       // 閉じる時のコールバック
+  nativeOptions, // ネイティブオプション
+  testID,        // テスト用ID
 }: React.PropsWithChildren<DialogOuterProps>) {
-  const themeName = useThemeName()
-  const t = useTheme(themeName)
-  const ref = React.useRef<BottomSheetNativeComponent>(null)
-  const closeCallbacks = React.useRef<(() => void)[]>([])
+  const themeName = useThemeName()  // 現在のテーマ名取得
+  const t = useTheme(themeName)     // テーマオブジェクト取得
+  const ref = React.useRef<BottomSheetNativeComponent>(null) // ボトムシートの参照
+  const closeCallbacks = React.useRef<(() => void)[]>([])   // 閉じる時のコールバック配列
+  // ダイアログ状態制御 - 開闉状態と全展開カウント管理
   const {setDialogIsOpen, setFullyExpandedCount} =
     useDialogStateControlContext()
 
+  // 前回のスナップポイントを記憶 - 全展開状態の管理のため
   const prevSnapPoint = React.useRef<BottomSheetSnapPoint>(
-    BottomSheetSnapPoint.Hidden,
+    BottomSheetSnapPoint.Hidden, // 初期状態は非表示
   )
 
-  const [disableDrag, setDisableDrag] = React.useState(false)
+  const [disableDrag, setDisableDrag] = React.useState(false) // ドラッグ無効化状態
+  // 現在のスナップポイント - ダイアログの表示高さ制御
   const [snapPoint, setSnapPoint] = React.useState<BottomSheetSnapPoint>(
-    BottomSheetSnapPoint.Partial,
+    BottomSheetSnapPoint.Partial, // 初期状態は部分表示
   )
 
+  // キューに登録されたコールバックを実行する関数
   const callQueuedCallbacks = React.useCallback(() => {
     for (const cb of closeCallbacks.current) {
       try {
-        cb()
+        cb() // コールバック実行
       } catch (e: any) {
-        logger.error(e || 'Error running close callback')
+        logger.error(e || 'Error running close callback') // エラーログ出力
       }
     }
 
-    closeCallbacks.current = []
+    closeCallbacks.current = [] // コールバック配列をクリア
   }, [])
 
+  // ダイアログを開く関数
   const open = React.useCallback<DialogControlProps['open']>(() => {
     // Run any leftover callbacks that might have been queued up before calling `.open()`
+    // .open()呼び出し前にキューに残っているコールバックを実行
     callQueuedCallbacks()
-    setDialogIsOpen(control.id, true)
-    ref.current?.present()
+    setDialogIsOpen(control.id, true) // ダイアログ開状態を設定
+    ref.current?.present()            // ボトムシートを表示
   }, [setDialogIsOpen, control.id, callQueuedCallbacks])
 
   // This is the function that we call when we want to dismiss the dialog.
+  // ダイアログを閉じる時に呼び出す関数
   const close = React.useCallback<DialogControlProps['close']>(cb => {
     if (typeof cb === 'function') {
-      closeCallbacks.current.push(cb)
+      closeCallbacks.current.push(cb) // コールバックをキューに追加
     }
-    ref.current?.dismiss()
+    ref.current?.dismiss() // ボトムシートを非表示
   }, [])
 
   // This is the actual thing we are doing once we "confirm" the dialog. We want the dialog's close animation to
   // happen before we run this. It is passed to the `BottomSheet` component.
+  // ダイアログを「確認」した後に実行される処理。ダイアログの閉じるアニメーションの
+  // 完了後に実行される。`BottomSheet`コンポーネントに渡される。
   const onCloseAnimationComplete = React.useCallback(() => {
     // This removes the dialog from our list of stored dialogs. Not super necessary on iOS, but on Android this
     // tells us that we need to toggle the accessibility overlay setting
-    setDialogIsOpen(control.id, false)
-    callQueuedCallbacks()
-    onClose?.()
+    // 保存されたダイアログのリストからこのダイアログを削除。iOSでは特に必要ないが、
+    // Androidではアクセシビリティオーバーレイ設定を切り替える必要があることを示す
+    setDialogIsOpen(control.id, false) // ダイアログ開状態をオフ
+    callQueuedCallbacks()              // キューに登録されたコールバックを実行
+    onClose?.()                       // 外部から渡された閉じるコールバックを実行
   }, [callQueuedCallbacks, control.id, onClose, setDialogIsOpen])
 
   const onSnapPointChange = (e: BottomSheetSnapPointChangeEvent) => {
@@ -181,19 +205,24 @@ export function Outer({
   )
 }
 
+/**
+ * ダイアログの内側コンポーネント - 非スクロールコンテンツ用
+ * Inner dialog component for non-scrollable content
+ */
 export function Inner({children, style, header}: DialogInnerProps) {
-  const insets = useSafeAreaInsets()
+  const insets = useSafeAreaInsets() // セーフエリア情報取得
   return (
     <>
+      {/* ヘッダー要素（ある場合） */}
       {header}
       <View
         style={[
-          a.pt_2xl,
-          a.px_xl,
+          a.pt_2xl,  // 上部パディング
+          a.px_xl,   // 横方向パディング
           {
-            paddingBottom: insets.bottom + insets.top,
+            paddingBottom: insets.bottom + insets.top, // 下部パディング（セーフエリア分）
           },
-          style,
+          style, // カスタムスタイル
         ]}>
         {children}
       </View>
@@ -356,39 +385,44 @@ export function FlatListFooter({children}: {children: React.ReactNode}) {
   )
 }
 
+/**
+ * ダイアログのハンドルコンポーネント - ドラッグやタップでダイアログを閉じるためのハンドル
+ * Dialog handle component for dragging or tapping to close the dialog
+ */
 export function Handle({difference = false}: {difference?: boolean}) {
-  const t = useTheme()
-  const {_} = useLingui()
-  const {screenReaderEnabled} = useA11y()
-  const {close} = useDialogContext()
+  const t = useTheme()                      // テーマ取得
+  const {_} = useLingui()                   // 翻訳関数取得
+  const {screenReaderEnabled} = useA11y()   // アクセシビリティ情報取得
+  const {close} = useDialogContext()        // ダイアログ閉じる関数取得
 
   return (
     <View style={[a.absolute, a.w_full, a.align_center, a.z_10, {height: 20}]}>
       <Pressable
-        accessible={screenReaderEnabled}
-        onPress={() => close()}
-        accessibilityLabel={_(msg`Dismiss`)}
-        accessibilityHint={_(msg`Double tap to close the dialog`)}>
+        accessible={screenReaderEnabled}                        // スクリーンリーダー有効時のみアクセシブル
+        onPress={() => close()}                                 // タップでダイアログを閉じる
+        accessibilityLabel={_(msg`Dismiss`)}                   // アクセシビリティラベル
+        accessibilityHint={_(msg`Double tap to close the dialog`)}> {/* アクセシビリティヒント */}
         <View
           style={[
-            a.rounded_sm,
+            a.rounded_sm, // 小さな角丸
             {
-              top: tokens.space._2xl / 2 - 2.5,
-              width: 35,
-              height: 5,
-              alignSelf: 'center',
+              top: tokens.space._2xl / 2 - 2.5, // 上部位置調整
+              width: 35,                         // ハンドル幅
+              height: 5,                         // ハンドル高さ
+              alignSelf: 'center',               // 中央揃え
             },
+            // ディファレンスモードか通常モードかでスタイル変更
             difference
               ? {
                   // TODO: mixBlendMode is only available on the new architecture -sfn
                   // backgroundColor: t.palette.white,
                   // mixBlendMode: 'difference',
-                  backgroundColor: t.palette.white,
-                  opacity: 0.75,
+                  backgroundColor: t.palette.white, // 白背景
+                  opacity: 0.75,                   // 半透明
                 }
               : {
-                  backgroundColor: t.palette.contrast_975,
-                  opacity: 0.5,
+                  backgroundColor: t.palette.contrast_975, // 高コントラスト背景
+                  opacity: 0.5,                           // 半透明
                 },
           ]}
         />
@@ -397,6 +431,10 @@ export function Handle({difference = false}: {difference?: boolean}) {
   )
 }
 
+/**
+ * ダイアログ用のクローズコンポーネント - 現在は何もレンダリングしない
+ * Close component for dialog - currently renders nothing
+ */
 export function Close() {
-  return null
+  return null // 何もレンダリングしない
 }

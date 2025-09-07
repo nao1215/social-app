@@ -1,11 +1,15 @@
-import {useCallback, useEffect, useState} from 'react'
-import {MMKV} from 'react-native-mmkv'
+// React基本機能とストレージ
+import {useCallback, useEffect, useState} from 'react' // Reactフック
+import {MMKV} from 'react-native-mmkv'                 // MMKV高性能ストレージ
 
-import {type Account, type Device} from '#/storage/schema'
+// ストレージスキーマ型定義
+import {type Account, type Device} from '#/storage/schema' // アカウント・デバイス型定義
 
-export * from '#/storage/schema'
+export * from '#/storage/schema' // スキーマエクスポート
 
 /**
+ * 汎用ストレージクラス。直接使用しないでください。代わりに下記のエクスポートされた
+ * ストレージインスタンスを使用してください。
  * Generic storage class. DO NOT use this directly. Instead, use the exported
  * storage instances below.
  */

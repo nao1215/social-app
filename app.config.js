@@ -1,21 +1,26 @@
+// パッケージ情報の読み込み
+// Package information loading
 const pkg = require('./package.json')
 
 module.exports = function (_config) {
   /**
+   * アプリのバージョン番号。リリースサイクルの一部として増分する必要があります
    * App version number. Should be incremented as part of a release cycle.
    */
   const VERSION = pkg.version
 
   /**
+   * Expo組み込み環境変数を使用
    * Uses built-in Expo env vars
    *
    * @see https://docs.expo.dev/build-reference/variables/#built-in-environment-variables
    */
   const PLATFORM = process.env.EAS_BUILD_PLATFORM
 
-  const IS_TESTFLIGHT = process.env.EXPO_PUBLIC_ENV === 'testflight'
-  const IS_PRODUCTION = process.env.EXPO_PUBLIC_ENV === 'production'
-  const IS_DEV = !IS_TESTFLIGHT || !IS_PRODUCTION
+  // 環境判定フラグ（Environment detection flags）
+  const IS_TESTFLIGHT = process.env.EXPO_PUBLIC_ENV === 'testflight'  // TestFlight環境
+  const IS_PRODUCTION = process.env.EXPO_PUBLIC_ENV === 'production'   // 本番環境
+  const IS_DEV = !IS_TESTFLIGHT || !IS_PRODUCTION                      // 開発環境
 
   const ASSOCIATED_DOMAINS = [
     'applinks:bsky.app',

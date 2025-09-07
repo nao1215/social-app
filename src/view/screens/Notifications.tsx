@@ -1,65 +1,84 @@
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import {View} from 'react-native'
-import {msg, Trans} from '@lingui/macro'
-import {useLingui} from '@lingui/react'
-import {useFocusEffect, useIsFocused} from '@react-navigation/native'
-import {useQueryClient} from '@tanstack/react-query'
+// React基本機能とUI
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react' // Reactフック
+import {View} from 'react-native'                                      // ビューコンポーネント
+import {msg, Trans} from '@lingui/macro'                              // 国際化マクロ
+import {useLingui} from '@lingui/react'                               // 国際化フック
+import {useFocusEffect, useIsFocused} from '@react-navigation/native' // ナビゲーション状態フック
+import {useQueryClient} from '@tanstack/react-query'                  // クエリクライアント
 
-import {useNonReactiveCallback} from '#/lib/hooks/useNonReactiveCallback'
-import {useOpenComposer} from '#/lib/hooks/useOpenComposer'
-import {ComposeIcon2} from '#/lib/icons'
+// フック・アイコン・ルーティング
+import {useNonReactiveCallback} from '#/lib/hooks/useNonReactiveCallback' // 非リアクティブコールバック
+import {useOpenComposer} from '#/lib/hooks/useOpenComposer'               // 投稿作成画面オープン
+import {ComposeIcon2} from '#/lib/icons'                                  // 作成アイコン
 import {
   type NativeStackScreenProps,
   type NotificationsTabNavigatorParams,
-} from '#/lib/routes/types'
-import {s} from '#/lib/styles'
-import {logger} from '#/logger'
-import {isNative} from '#/platform/detection'
-import {emitSoftReset, listenSoftReset} from '#/state/events'
-import {RQKEY as NOTIFS_RQKEY} from '#/state/queries/notifications/feed'
-import {useNotificationSettingsQuery} from '#/state/queries/notifications/settings'
+} from '#/lib/routes/types'                                               // ルート型定義
+import {s} from '#/lib/styles'                                            // スタイル定数
+import {logger} from '#/logger'                                           // ロガー
+import {isNative} from '#/platform/detection'                            // プラットフォーム判定
+
+// 状態管理・イベント
+import {emitSoftReset, listenSoftReset} from '#/state/events'            // ソフトリセットイベント
+import {RQKEY as NOTIFS_RQKEY} from '#/state/queries/notifications/feed' // 通知クエリキー
+import {useNotificationSettingsQuery} from '#/state/queries/notifications/settings' // 通知設定クエリ
 import {
   useUnreadNotifications,
   useUnreadNotificationsApi,
-} from '#/state/queries/notifications/unread'
-import {truncateAndInvalidate} from '#/state/queries/util'
-import {useSetMinimalShellMode} from '#/state/shell'
-import {NotificationFeed} from '#/view/com/notifications/NotificationFeed'
-import {Pager} from '#/view/com/pager/Pager'
-import {TabBar} from '#/view/com/pager/TabBar'
-import {FAB} from '#/view/com/util/fab/FAB'
-import {type ListMethods} from '#/view/com/util/List'
-import {LoadLatestBtn} from '#/view/com/util/load-latest/LoadLatestBtn'
-import {MainScrollProvider} from '#/view/com/util/MainScrollProvider'
-import {atoms as a, useTheme} from '#/alf'
-import {web} from '#/alf'
-import {Admonition} from '#/components/Admonition'
-import {ButtonIcon} from '#/components/Button'
-import {SettingsGear2_Stroke2_Corner0_Rounded as SettingsIcon} from '#/components/icons/SettingsGear2'
-import * as Layout from '#/components/Layout'
-import {InlineLinkText, Link} from '#/components/Link'
-import {Loader} from '#/components/Loader'
+} from '#/state/queries/notifications/unread'                            // 未読通知管理
+import {truncateAndInvalidate} from '#/state/queries/util'               // クエリ無効化
+import {useSetMinimalShellMode} from '#/state/shell'                     // ミニマルシェルモード
 
+// ビューコンポーネント
+import {NotificationFeed} from '#/view/com/notifications/NotificationFeed' // 通知フィード
+import {Pager} from '#/view/com/pager/Pager'                              // ページャー
+import {TabBar} from '#/view/com/pager/TabBar'                            // タブバー
+import {FAB} from '#/view/com/util/fab/FAB'                               // フローティングアクションボタン
+import {type ListMethods} from '#/view/com/util/List'                     // リストメソッド型
+import {LoadLatestBtn} from '#/view/com/util/load-latest/LoadLatestBtn'   // 最新読み込みボタン
+import {MainScrollProvider} from '#/view/com/util/MainScrollProvider'     // メインスクロールプロバイダー
+
+// デザインシステム・レイアウト
+import {atoms as a, useTheme} from '#/alf'                                // Alfデザインシステム
+import {web} from '#/alf'                                                 // Web専用スタイル
+import {Admonition} from '#/components/Admonition'                        // 警告コンポーネント
+import {ButtonIcon} from '#/components/Button'                            // ボタンアイコン
+import {SettingsGear2_Stroke2_Corner0_Rounded as SettingsIcon} from '#/components/icons/SettingsGear2' // 設定アイコン
+import * as Layout from '#/components/Layout'                             // レイアウトコンポーネント
+import {InlineLinkText, Link} from '#/components/Link'                    // リンクコンポーネント
+import {Loader} from '#/components/Loader'                                // ローダー
+
+// リロード時の状態は現在永続化していません
+// （バッジをクリアするには「すべて」タブにアクセスする必要があるため）
+// ただし、セッション中は少なくとも永続化させます
 // We don't currently persist this across reloads since
 // you gotta visit All to clear the badge anyway.
 // But let's at least persist it during the sesssion.
 let lastActiveTab = 0
 
+// 通知画面のプロパティ型定義
 type Props = NativeStackScreenProps<
   NotificationsTabNavigatorParams,
   'Notifications'
 >
+
+/**
+ * 通知画面メインコンポーネント
+ * 「すべて」と「メンション」の2つのタブを表示
+ * Notifications screen main component
+ * Displays two tabs: "All" and "Mentions"
+ */
 export function NotificationsScreen({}: Props) {
-  const {_} = useLingui()
-  const {openComposer} = useOpenComposer()
-  const unreadNotifs = useUnreadNotifications()
-  const hasNew = !!unreadNotifs
-  const {checkUnread: checkUnreadAll} = useUnreadNotificationsApi()
-  const [isLoadingAll, setIsLoadingAll] = useState(false)
-  const [isLoadingMentions, setIsLoadingMentions] = useState(false)
-  const initialActiveTab = lastActiveTab
-  const [activeTab, setActiveTab] = useState(initialActiveTab)
-  const isLoading = activeTab === 0 ? isLoadingAll : isLoadingMentions
+  const {_} = useLingui()                                    // 国際化
+  const {openComposer} = useOpenComposer()                   // 投稿作成画面オープナー
+  const unreadNotifs = useUnreadNotifications()              // 未読通知データ
+  const hasNew = !!unreadNotifs                              // 新しい通知があるかの判定
+  const {checkUnread: checkUnreadAll} = useUnreadNotificationsApi() // 未読通知チェックAPI
+  const [isLoadingAll, setIsLoadingAll] = useState(false)     // すべてタブの読み込み状態
+  const [isLoadingMentions, setIsLoadingMentions] = useState(false) // メンションタブの読み込み状態
+  const initialActiveTab = lastActiveTab                      // 初期アクティブタブ
+  const [activeTab, setActiveTab] = useState(initialActiveTab) // 現在のアクティブタブ
+  const isLoading = activeTab === 0 ? isLoadingAll : isLoadingMentions // 現在のタブの読み込み状態
 
   const onPageSelected = useCallback(
     (index: number) => {

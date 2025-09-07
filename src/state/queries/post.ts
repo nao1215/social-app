@@ -1,27 +1,45 @@
+// Reactフック関連 / React hooks related
 import {useCallback} from 'react'
-import {type AppBskyActorDefs, type AppBskyFeedDefs, AtUri} from '@atproto/api'
+// AT Protocol API型定義とユーティリティ / AT Protocol API types and utilities
+import {type AppBskyActorDefs, type AppBskyFeedDefs, AtUri} from '@atproto/api' // アクター、フィード型、URIパーサー / Actor types, feed types, URI parser
+// TanStack Query（データ取得・キャッシュライブラリ） / TanStack Query (data fetching & caching library)
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
 
-import {useToggleMutationQueue} from '#/lib/hooks/useToggleMutationQueue'
-import {type LogEvents, toClout} from '#/lib/statsig/statsig'
-import {logger} from '#/logger'
-import {updatePostShadow} from '#/state/cache/post-shadow'
-import {type Shadow} from '#/state/cache/types'
-import {useAgent, useSession} from '#/state/session'
-import * as userActionHistory from '#/state/userActionHistory'
-import {useIsThreadMuted, useSetThreadMute} from '../cache/thread-mutes'
-import {findProfileQueryData} from './profile'
+// ライブラリとユーティリティ / Libraries and utilities
+import {useToggleMutationQueue} from '#/lib/hooks/useToggleMutationQueue' // トグル操作キューフック / Toggle operation queue hook
+import {type LogEvents, toClout} from '#/lib/statsig/statsig' // ログ型と影響力計算 / Log types and influence calculation
+import {logger} from '#/logger' // ロガー / Logger
+// キャッシュ管理 / Cache management
+import {updatePostShadow} from '#/state/cache/post-shadow' // 投稿キャッシュ更新 / Post cache update
+import {type Shadow} from '#/state/cache/types' // シャドウキャッシュ型定義 / Shadow cache type definitions
+// セッションとユーザー管理 / Session and user management
+import {useAgent, useSession} from '#/state/session' // エージェントとセッション管理 / Agent and session management
+import * as userActionHistory from '#/state/userActionHistory' // ユーザー行動履歴 / User action history
+// スレッドミュート管理 / Thread mute management
+import {useIsThreadMuted, useSetThreadMute} from '../cache/thread-mutes' // スレッドミュート状態管理 / Thread mute state management
+// 関連クエリ / Related queries
+import {findProfileQueryData} from './profile' // プロフィールクエリデータ検索 / Profile query data search
 
-const RQKEY_ROOT = 'post'
+// クエリキーの定義 / Query key definitions
+const RQKEY_ROOT = 'post' // 投稿クエリのルートキー / Post query root key
+/**
+ * 個別投稿用クエリキー生成関数 / Individual post query key generator
+ * @param postUri 投稿URI / Post URI
+ */
 export const RQKEY = (postUri: string) => [RQKEY_ROOT, postUri]
 
+/**
+ * 個別の投稿を取得するフック / Hook for fetching a single post
+ * @param uri 投稿URI / Post URI
+ */
 export function usePostQuery(uri: string | undefined) {
-  const agent = useAgent()
+  const agent = useAgent() // Bluesky APIエージェント取得 / Get Bluesky API agent
   return useQuery<AppBskyFeedDefs.PostView>({
-    queryKey: RQKEY(uri || ''),
+    queryKey: RQKEY(uri || ''), // クエリキー / Query key
     async queryFn() {
-      const urip = new AtUri(uri!)
+      const urip = new AtUri(uri!) // URIをパース / Parse URI
 
+      // ハンドルをDIDに解決（必要に応じて） / Resolve handle to DID if needed
       if (!urip.host.startsWith('did:')) {
         const res = await agent.resolveHandle({
           handle: urip.host,
@@ -29,6 +47,7 @@ export function usePostQuery(uri: string | undefined) {
         urip.host = res.data.did
       }
 
+      // APIから投稿データを取得 / Fetch post data from API
       const res = await agent.getPosts({uris: [urip.toString()]})
       if (res.success && res.data.posts[0]) {
         return res.data.posts[0]
@@ -36,20 +55,25 @@ export function usePostQuery(uri: string | undefined) {
 
       throw new Error('No data')
     },
-    enabled: !!uri,
+    enabled: !!uri, // URIがある場合のみ有効 / Only enabled when URI is available
   })
 }
 
+/**
+ * 投稿を取得する関数を返すフック / Hook that returns a function to fetch posts
+ * キャッシュから取得し、なければAPIから取得 / Fetches from cache, or from API if not cached
+ */
 export function useGetPost() {
-  const queryClient = useQueryClient()
-  const agent = useAgent()
+  const queryClient = useQueryClient() // クエリクライアント取得 / Get query client
+  const agent = useAgent() // Bluesky APIエージェント取得 / Get Bluesky API agent
   return useCallback(
     async ({uri}: {uri: string}) => {
       return queryClient.fetchQuery({
-        queryKey: RQKEY(uri || ''),
+        queryKey: RQKEY(uri || ''), // クエリキー / Query key
         async queryFn() {
-          const urip = new AtUri(uri)
+          const urip = new AtUri(uri) // URIをパース / Parse URI
 
+          // ハンドルをDIDに解決（必要に応じて） / Resolve handle to DID if needed
           if (!urip.host.startsWith('did:')) {
             const res = await agent.resolveHandle({
               handle: urip.host,
@@ -57,6 +81,7 @@ export function useGetPost() {
             urip.host = res.data.did
           }
 
+          // APIから投稿データを取得 / Fetch post data from API
           const res = await agent.getPosts({
             uris: [urip.toString()],
           })
@@ -97,6 +122,14 @@ export function useGetPosts() {
   )
 }
 
+/**
+ * 投稿のいいね操作をキューに入れて管理するフック / Hook to queue and manage post like operations
+ * 最適化: 連続した操作をキューでまとめて処理 / Optimization: batch consecutive operations in a queue
+ * @param post 投稿データ / Post data
+ * @param viaRepost リポスト経由の情報 / Via repost information
+ * @param feedDescriptor フィード識別子 / Feed descriptor
+ * @param logContext ログコンテキスト / Log context
+ */
 export function usePostLikeMutationQueue(
   post: Shadow<AppBskyFeedDefs.PostView>,
   viaRepost: {uri: string; cid: string} | undefined,
@@ -305,14 +338,20 @@ function usePostUnrepostMutation(
   })
 }
 
+/**
+ * 投稿を削除するミューテーションフック / Hook for deleting posts
+ * 削除後、キャッシュを更新してUIに反映 / After deletion, updates cache to reflect in UI
+ */
 export function usePostDeleteMutation() {
-  const queryClient = useQueryClient()
-  const agent = useAgent()
+  const queryClient = useQueryClient() // クエリクライアント取得 / Get query client
+  const agent = useAgent() // Bluesky APIエージェント取得 / Get Bluesky API agent
   return useMutation<void, Error, {uri: string}>({
     mutationFn: async ({uri}) => {
+      // APIで投稿を削除 / Delete post via API
       await agent.deletePost(uri)
     },
     onSuccess(_, variables) {
+      // キャッシュで削除フラグを設定 / Set deletion flag in cache
       updatePostShadow(queryClient, variables.uri, {isDeleted: true})
     },
   })

@@ -1,37 +1,55 @@
+// ReactライブラリとuseMemoフックをインポート / Import React library and useMemo hook
 import React, {useMemo} from 'react'
+// 国際化メッセージ機能をインポート / Import internationalization message functionality
 import {msg} from '@lingui/macro'
 import {useLingui} from '@lingui/react'
 
+// イベントログ機能をインポート / Import event logging functionality
 import {logEvent} from '#/lib/statsig/statsig'
+// 進捗ガイドトーストコンポーネントをインポート / Import progress guide toast component
 import {
   ProgressGuideToast,
   type ProgressGuideToastRef,
 } from '#/components/ProgressGuide/Toast'
+// 設定クエリとミューテーションをインポート / Import preferences query and mutations
 import {
   usePreferencesQuery,
   useSetActiveProgressGuideMutation,
 } from '../queries/preferences'
 
+/**
+ * 進捗ガイドのアクション種別
+ * Progress guide action types
+ */
 export enum ProgressGuideAction {
-  Like = 'like',
-  Follow = 'follow',
+  Like = 'like', // いいねアクション / Like action
+  Follow = 'follow', // フォローアクション / Follow action
 }
 
+// 進捗ガイドの名前型 / Progress guide name type
 type ProgressGuideName = 'like-10-and-follow-7' | 'follow-10'
 
 /**
+ * 進捗ガイドのベースインターフェース
+ * このインターフェースを継承する進捗ガイドは`guide`フィールドで名前を指定する必要がある
+ * 
+ * Base interface for progress guides
  * Progress Guides that extend this interface must specify their name in the `guide` field, so it can be used as a discriminated union
  */
 interface BaseProgressGuide {
-  guide: ProgressGuideName
-  isComplete: boolean
-  [key: string]: any
+  guide: ProgressGuideName // ガイド名 / Guide name
+  isComplete: boolean // 完了フラグ / Completion flag
+  [key: string]: any // 追加プロパティ / Additional properties
 }
 
+/**
+ * 10いいね〄7フォローの進捗ガイドインターフェース
+ * Progress guide interface for 10 likes and 7 follows
+ */
 export interface Like10AndFollow7ProgressGuide extends BaseProgressGuide {
-  guide: 'like-10-and-follow-7'
-  numLikes: number
-  numFollows: number
+  guide: 'like-10-and-follow-7' // ガイド種別 / Guide type
+  numLikes: number // いいね数 / Number of likes
+  numFollows: number // フォロー数 / Number of follows
 }
 
 export interface Follow10ProgressGuide extends BaseProgressGuide {

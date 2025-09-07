@@ -1,35 +1,58 @@
+// Reactライブラリをインポート / Import React library
 import React from 'react'
 
+// 永続化ストレージ機能をインポート / Import persistent storage functionality
 import * as persisted from '#/state/persisted'
 
+/**
+ * オンボーディング画面のステップ定数
+ * Onboarding screen step constants
+ */
 export const OnboardingScreenSteps = {
-  Welcome: 'Welcome',
-  RecommendedFeeds: 'RecommendedFeeds',
-  RecommendedFollows: 'RecommendedFollows',
-  Home: 'Home',
+  Welcome: 'Welcome', // 歓迎画面 / Welcome screen
+  RecommendedFeeds: 'RecommendedFeeds', // おすすめフィード画面 / Recommended feeds screen
+  RecommendedFollows: 'RecommendedFollows', // おすすめフォロー画面 / Recommended follows screen
+  Home: 'Home', // ホーム画面 / Home screen
 } as const
 
+// オンボーディングステップの型定義 / Type definition for onboarding steps
 type OnboardingStep =
   (typeof OnboardingScreenSteps)[keyof typeof OnboardingScreenSteps]
+// オンボーディングステップの配列 / Array of onboarding steps
 const OnboardingStepsArray = Object.values(OnboardingScreenSteps)
 
+/**
+ * オンボーディング状態変更のアクション型
+ * Action type for onboarding state changes
+ */
 type Action =
-  | {type: 'set'; step: OnboardingStep}
-  | {type: 'next'; currentStep?: OnboardingStep}
-  | {type: 'start'}
-  | {type: 'finish'}
-  | {type: 'skip'}
+  | {type: 'set'; step: OnboardingStep} // 特定ステップに設定 / Set to specific step
+  | {type: 'next'; currentStep?: OnboardingStep} // 次のステップに進む / Move to next step
+  | {type: 'start'} // オンボーディング開始 / Start onboarding
+  | {type: 'finish'} // オンボーディング完了 / Finish onboarding
+  | {type: 'skip'} // オンボーディングスキップ / Skip onboarding
 
+/**
+ * オンボーディング状態のコンテキスト型
+ * Context type for onboarding state
+ */
 export type StateContext = persisted.Schema['onboarding'] & {
-  isComplete: boolean
-  isActive: boolean
+  isComplete: boolean // 完了フラグ / Completion flag
+  isActive: boolean // アクティブフラグ / Active flag
 }
+
+/**
+ * オンボーディングアクション実行のコンテキスト型
+ * Context type for onboarding action dispatch
+ */
 export type DispatchContext = (action: Action) => void
 
+// オンボーディング状態管理のReactコンテキスト / React context for onboarding state management
 const stateContext = React.createContext<StateContext>(
   compute(persisted.defaults.onboarding),
 )
 stateContext.displayName = 'OnboardingStateContext'
+// オンボーディングアクション実行のReactコンテキスト / React context for onboarding action dispatch
 const dispatchContext = React.createContext<DispatchContext>((_: Action) => {})
 dispatchContext.displayName = 'OnboardingDispatchContext'
 

@@ -1,10 +1,14 @@
+// AT Protocol APIのスレッドゲート関連の型定義と関数をインポート
+// Import threadgate-related type definitions and functions from AT Protocol API
 import {
-  AppBskyFeedDefs,
-  AppBskyFeedGetPostThread,
-  AppBskyFeedThreadgate,
-  AtUri,
-  BskyAgent,
+  AppBskyFeedDefs, // フィード関連の型定義 (Feed-related type definitions)
+  AppBskyFeedGetPostThread, // スレッド取得APIの型 (Thread retrieval API types)
+  AppBskyFeedThreadgate, // スレッドゲートの型定義 (Threadgate type definitions)
+  AtUri, // AT URIパーサー (AT URI parser)
+  BskyAgent, // Blueskyエージェント (Bluesky agent)
 } from '@atproto/api'
+// React Queryのフックをインポート
+// Import React Query hooks
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
 
 import {networkRetry, retry} from '#/lib/async/retry'
@@ -25,10 +29,12 @@ import * as bsky from '#/types/bsky'
 export * from '#/state/queries/threadgate/types'
 export * from '#/state/queries/threadgate/util'
 
+// スレッドゲートレコードクエリのルートキーとキー生成関数
+// Threadgate record query root key and key generation function
 export const threadgateRecordQueryKeyRoot = 'threadgate-record'
 export const createThreadgateRecordQueryKey = (uri: string) => [
   threadgateRecordQueryKeyRoot,
-  uri,
+  uri, // 投稿のURI (Post URI)
 ]
 
 export function useThreadgateRecordQuery({
@@ -213,6 +219,9 @@ export async function upsertThreadgate(
 }
 
 /**
+ * スレッドゲートレコードの許可リストを更新。
+ * 返信を許可するユーザーの範囲を制御する。
+ *
  * Update the allow list for a threadgate record.
  */
 export async function updateThreadgateAllow({
@@ -220,9 +229,9 @@ export async function updateThreadgateAllow({
   postUri,
   allow,
 }: {
-  agent: BskyAgent
-  postUri: string
-  allow: ThreadgateAllowUISetting[]
+  agent: BskyAgent // Blueskyエージェント (Bluesky agent)
+  postUri: string // 投稿のURI (Post URI)
+  allow: ThreadgateAllowUISetting[] // 許可設定 (Allow settings)
 }) {
   return upsertThreadgate({agent, postUri}, async prev => {
     if (prev) {
@@ -239,9 +248,13 @@ export async function updateThreadgateAllow({
   })
 }
 
+/**
+ * スレッドゲートの許可設定を更新するミューテーションフック
+ * Mutation hook to update threadgate allow settings
+ */
 export function useSetThreadgateAllowMutation() {
-  const agent = useAgent()
-  const queryClient = useQueryClient()
+  const agent = useAgent() // AT Protocolエージェント (AT Protocol agent)
+  const queryClient = useQueryClient() // React Queryクライアント (React Query client)
 
   return useMutation({
     mutationFn: async ({
@@ -300,10 +313,14 @@ export function useSetThreadgateAllowMutation() {
   })
 }
 
+/**
+ * 返信の表示/非表示を切り替えるミューテーションフック
+ * Mutation hook to toggle reply visibility (hide/show)
+ */
 export function useToggleReplyVisibilityMutation() {
-  const agent = useAgent()
-  const queryClient = useQueryClient()
-  const hiddenReplies = useThreadgateHiddenReplyUrisAPI()
+  const agent = useAgent() // AT Protocolエージェント (AT Protocol agent)
+  const queryClient = useQueryClient() // React Queryクライアント (React Query client)
+  const hiddenReplies = useThreadgateHiddenReplyUrisAPI() // 非表示返信管理API (Hidden replies management API)
 
   return useMutation({
     mutationFn: async ({

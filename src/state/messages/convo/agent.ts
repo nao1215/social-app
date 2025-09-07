@@ -1,3 +1,4 @@
+// AT Protocol API関連のインポート - メッセージ送受信、会話管理、アクター定義などのAPIクライアントとタイプ定義
 import {
   type AtpAgent,
   type ChatBskyActorDefs,
@@ -5,21 +6,31 @@ import {
   type ChatBskyConvoGetLog,
   type ChatBskyConvoSendMessage,
 } from '@atproto/api'
+// XRPC通信エラーハンドリング - ネットワークエラーやプロトコルエラーの処理
 import {XRPCError} from '@atproto/xrpc'
+// イベント駆動アーキテクチャ - 会話状態の変更やメッセージの送受信イベントを管理
 import EventEmitter from 'eventemitter3'
+// 一意ID生成 - メッセージの一時IDや会話インスタンスIDの生成（セキュアでない高速版）
 import {nanoid} from 'nanoid/non-secure'
 
+// ネットワーク再試行ユーティリティ - API呼び出しの自動リトライ機能
 import {networkRetry} from '#/lib/async/retry'
+// ダイレクトメッセージサービス用ヘッダー - DMサービスとの通信に必要なHTTPヘッダー
 import {DM_SERVICE_HEADERS} from '#/lib/constants'
+// ネットワークエラー判定 - エラーがネットワーク関連かどうかを判断
 import {isNetworkError} from '#/lib/strings/errors'
+// ログ出力システム - デバッグとエラートラッキング
 import {Logger} from '#/logger'
+// プラットフォーム検出 - ネイティブアプリかウェブかの判定
 import {isNative} from '#/platform/detection'
+// 会話ポーリング間隔とタイムアウト設定 - アクティブ/バックグラウンド時の更新頻度制御
 import {
   ACTIVE_POLL_INTERVAL,
   BACKGROUND_POLL_INTERVAL,
   INACTIVE_TIMEOUT,
   NETWORK_FAILURE_STATUSES,
 } from '#/state/messages/convo/const'
+// 会話状態管理の型定義 - ディスパッチイベント、エラー、状態、アイテムなどのタイプ
 import {
   type ConvoDispatch,
   ConvoDispatchEvent,
@@ -32,15 +43,26 @@ import {
   type ConvoState,
   ConvoStatus,
 } from '#/state/messages/convo/types'
+// メッセージイベントバス - リアルタイムメッセージ配信システムとの統合
 import {type MessagesEventBus} from '#/state/messages/events/agent'
+// イベントバスエラー型 - イベント配信システムのエラーハンドリング
 import {type MessagesEventBusError} from '#/state/messages/events/types'
 
+// 会話エージェント専用ログインスタンス - デバッグとエラートラッキングのため
 const logger = Logger.create(Logger.Context.ConversationAgent)
 
+/**
+ * 会話アイテムがメッセージタイプかどうかを判定
+ * Determines if a conversation item is a message type
+ * 
+ * @param item - チェックする会話アイテム / Conversation item to check
+ * @returns メッセージタイプ（通常、削除済み、送信中）の場合true / True if item is a message type (normal, deleted, or pending)
+ */
 export function isConvoItemMessage(
   item: ConvoItem,
 ): item is ConvoItem & {type: 'message'} {
   if (!item) return false
+  // メッセージ、削除済みメッセージ、送信中メッセージのいずれかをチェック
   return (
     item.type === 'message' ||
     item.type === 'deleted-message' ||
@@ -48,74 +70,107 @@ export function isConvoItemMessage(
   )
 }
 
+/**
+ * 会話エージェントクラス - 単一の会話のライフサイクルと状態を管理
+ * Conversation agent class - manages the lifecycle and state of a single conversation
+ * 
+ * メッセージの送受信、履歴取得、リアルタイム更新、状態管理を担当
+ * Handles message sending/receiving, history fetching, real-time updates, and state management
+ */
 export class Convo {
+  // 内部インスタンスID - デバッグとログ出力用の一意識別子
   private id: string
 
-  private agent: AtpAgent
-  private events: MessagesEventBus
-  private senderUserDid: string
+  // AT Protocolエージェントとイベントバスのインスタンス
+  private agent: AtpAgent // APIクライアント / API client
+  private events: MessagesEventBus // リアルタイムイベント配信 / Real-time event delivery
+  private senderUserDid: string // 送信者のDID識別子 / Sender's DID identifier
 
-  private status: ConvoStatus = ConvoStatus.Uninitialized
-  private error: ConvoError | undefined
-  private oldestRev: string | undefined | null = undefined
-  private isFetchingHistory = false
-  private latestRev: string | undefined = undefined
+  // 会話の現在状態とエラー管理
+  private status: ConvoStatus = ConvoStatus.Uninitialized // 会話の初期化状態 / Conversation initialization status
+  private error: ConvoError | undefined // 発生したエラー情報 / Occurred error information
+  private oldestRev: string | undefined | null = undefined // 最古メッセージのリビジョン（履歴取得用） / Oldest message revision for history fetching
+  private isFetchingHistory = false // 履歴取得中フラグ / History fetching in progress flag
+  private latestRev: string | undefined = undefined // 最新リビジョン（リアルタイム更新用） / Latest revision for real-time updates
 
-  private pastMessages: Map<
+  // メッセージストレージ - 異なる状態のメッセージを分離管理
+  private pastMessages: Map< // 過去の確定済みメッセージ / Past confirmed messages
     string,
     ChatBskyConvoDefs.MessageView | ChatBskyConvoDefs.DeletedMessageView
   > = new Map()
-  private newMessages: Map<
+  private newMessages: Map< // 新着メッセージ（リアルタイム受信） / New messages (real-time received)
     string,
     ChatBskyConvoDefs.MessageView | ChatBskyConvoDefs.DeletedMessageView
   > = new Map()
-  private pendingMessages: Map<
+  private pendingMessages: Map< // 送信待ちメッセージ / Pending outgoing messages
     string,
     {id: string; message: ChatBskyConvoSendMessage.InputSchema['message']}
   > = new Map()
-  private deletedMessages: Set<string> = new Set()
+  private deletedMessages: Set<string> = new Set() // 削除済みメッセージID集合 / Set of deleted message IDs
 
-  private isProcessingPendingMessages = false
+  // メッセージ送信処理制御
+  private isProcessingPendingMessages = false // 送信処理中フラグ / Message sending in progress flag
 
-  private lastActiveTimestamp: number | undefined
+  // アクティビティ追跡 - バックグラウンド復帰時の状態判定用
+  private lastActiveTimestamp: number | undefined // 最後のアクティブ時刻 / Last active timestamp
 
+  // イベント配信システム - 外部への状態変更通知
   private emitter = new EventEmitter<{event: [ConvoEvent]}>()
 
-  convoId: string
-  convo: ChatBskyConvoDefs.ConvoView | undefined
-  sender: ChatBskyActorDefs.ProfileViewBasic | undefined
-  recipients: ChatBskyActorDefs.ProfileViewBasic[] | undefined
-  snapshot: ConvoState | undefined
+  // 公開プロパティ - 外部からアクセス可能な会話情報
+  convoId: string // 会話ID / Conversation ID
+  convo: ChatBskyConvoDefs.ConvoView | undefined // 会話メタデータ / Conversation metadata
+  sender: ChatBskyActorDefs.ProfileViewBasic | undefined // 送信者プロフィール / Sender profile
+  recipients: ChatBskyActorDefs.ProfileViewBasic[] | undefined // 受信者プロフィール群 / Recipients profiles
+  snapshot: ConvoState | undefined // 現在状態のスナップショット / Current state snapshot
 
+  /**
+   * 会話エージェントのコンストラクタ
+   * Constructor for conversation agent
+   * 
+   * @param params - 会話初期化パラメータ / Conversation initialization parameters
+   */
   constructor(params: ConvoParams) {
+    // デバッグ用の短いランダムID生成
     this.id = nanoid(3)
+    // パラメータから必要なインスタンスを設定
     this.convoId = params.convoId
     this.agent = params.agent
     this.events = params.events
+    // セッションから送信者のDIDを取得
     this.senderUserDid = params.agent.session?.did!
 
+    // プレースホルダーデータがある場合は即座に設定（UIの早期描画用）
     if (params.placeholderData) {
       this.setupPlaceholderData(params.placeholderData)
     }
 
-    this.subscribe = this.subscribe.bind(this)
-    this.getSnapshot = this.getSnapshot.bind(this)
-    this.sendMessage = this.sendMessage.bind(this)
-    this.deleteMessage = this.deleteMessage.bind(this)
-    this.fetchMessageHistory = this.fetchMessageHistory.bind(this)
-    this.ingestFirehose = this.ingestFirehose.bind(this)
-    this.onFirehoseConnect = this.onFirehoseConnect.bind(this)
-    this.onFirehoseError = this.onFirehoseError.bind(this)
-    this.markConvoAccepted = this.markConvoAccepted.bind(this)
-    this.addReaction = this.addReaction.bind(this)
-    this.removeReaction = this.removeReaction.bind(this)
+    // メソッドのthisバインディング - 外部で呼び出される際のコンテキスト保持
+    this.subscribe = this.subscribe.bind(this) // 購読管理
+    this.getSnapshot = this.getSnapshot.bind(this) // 状態スナップショット取得
+    this.sendMessage = this.sendMessage.bind(this) // メッセージ送信
+    this.deleteMessage = this.deleteMessage.bind(this) // メッセージ削除
+    this.fetchMessageHistory = this.fetchMessageHistory.bind(this) // 履歴取得
+    this.ingestFirehose = this.ingestFirehose.bind(this) // リアルタイムイベント処理
+    this.onFirehoseConnect = this.onFirehoseConnect.bind(this) // 接続イベント処理
+    this.onFirehoseError = this.onFirehoseError.bind(this) // エラーイベント処理
+    this.markConvoAccepted = this.markConvoAccepted.bind(this) // 会話承認
+    this.addReaction = this.addReaction.bind(this) // リアクション追加
+    this.removeReaction = this.removeReaction.bind(this) // リアクション削除
   }
 
+  /**
+   * 状態変更をコミット - スナップショットを無効化し、全購読者に通知
+   * Commits state changes - invalidates snapshot and notifies all subscribers
+   */
   private commit() {
+    // スナップショットをクリアして再生成を促す
     this.snapshot = undefined
+    // 全ての購読者に状態変更を通知
     this.subscribers.forEach(subscriber => subscriber())
   }
 
+  // 状態変更の購読者リスト - UI更新などのコールバック関数を管理
   private subscribers: (() => void)[] = []
 
   subscribe(subscriber: () => void) {
