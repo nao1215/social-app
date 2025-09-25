@@ -58,6 +58,26 @@ import {updateActiveViewAsync} from '../../../modules/expo-bluesky-swiss-army/sr
 import {Composer} from './Composer'                                      // 投稿作成
 import {DrawerContent} from './Drawer'                                   // ドロワー内容
 
+/**
+ * ShellInner - アプリケーション内部シェルコンポーネント
+ *
+ * 【主な機能】
+ * - ドロワーレイアウトとタブナビゲーターの統合
+ * - 通知システムの初期化と処理
+ * - ハードウェアバックボタンの制御（Android）
+ * - expo-video最適化処理（Android向けハック）
+ *
+ * 【レガシー情報】
+ * - メインのUIシェル実装
+ * - 新しいデザインシステム（Alf）に移行中
+ *
+ * 【アーキテクチャ】
+ * - エラーバウンダリ内でメインナビゲーションを配置
+ * - 作曲者、モーダル、ダイアログを最上位に配置
+ * - ポリシー更新状態に応じてポータルの表示制御
+ *
+ * @returns JSX要素 - 内部シェルレイアウト
+ */
 function ShellInner() {
   const winDim = useWindowDimensions()
   const insets = useSafeAreaInsets()
@@ -135,6 +155,27 @@ function ShellInner() {
   )
 }
 
+/**
+ * DrawerLayout - ドロワーレイアウト管理コンポーネント
+ *
+ * 【主な機能】
+ * - サイドドロワーの開閉状態管理
+ * - ジェスチャーベースのドロワー操作
+ * - プラットフォーム固有のドロワーアニメーション
+ * - スワイプ無効化制御
+ *
+ * 【レガシー情報】
+ * - react-native-drawer-layoutを使用
+ * - 新しいNavigationシステムと統合
+ *
+ * 【アーキテクチャ】
+ * - セッション状態とナビゲーション状態を監視
+ * - ジェスチャー競合回避のため外部ジェスチャーと連携
+ * - プラットフォーム別スタイル適用
+ *
+ * @param props - children: 子要素
+ * @returns JSX要素 - ドロワーレイアウト
+ */
 function DrawerLayout({children}: {children: React.ReactNode}) {
   const t = useTheme()
   const isDrawerOpen = useIsDrawerOpen()
@@ -205,6 +246,26 @@ function DrawerLayout({children}: {children: React.ReactNode}) {
   )
 }
 
+/**
+ * Shell - メインアプリケーションシェルコンポーネント
+ *
+ * 【主な機能】
+ * - 最上位レイアウトとテーマ管理
+ * - システムUI（ステータスバー・ナビゲーションバー）制御
+ * - 地理的制限による年齢ブロック処理
+ * - インテントハンドラーの初期化
+ *
+ * 【レガシー情報】
+ * - アプリの最上位エントリーポイント
+ * - 旧viewシステムから新しいscreensへ移行中
+ *
+ * 【アーキテクチャ】
+ * - RoutesContainerでナビゲーション全体を包括
+ * - 地理的制限時はBlockedGeoOverlay表示
+ * - ダイアログ展開数に応じてシステムバー調整
+ *
+ * @returns JSX要素 - アプリケーションシェル
+ */
 export function Shell() {
   const t = useTheme()
   const {status: geolocation} = useGeolocationStatus()

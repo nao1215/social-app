@@ -43,6 +43,31 @@ import {LoggedOutCTA} from '#/components/LoggedOutCTA'
 const PARENT_CHUNK_SIZE = 5
 const CHILDREN_CHUNK_SIZE = 50
 
+/**
+ * 投稿スレッド表示画面コンポーネント
+ *
+ * 【主な機能】
+ * - 投稿とその返信をスレッド形式で表示
+ * - 親投稿と子投稿の階層表示制御
+ * - リニア表示とツリー表示の切り替え
+ * - 返信の投稿とリアルタイム更新
+ * - パフォーマンス最適化された仮想化スクロール
+ * - アンカー投稿の画面上部固定制御
+ *
+ * 【状態管理】
+ * - usePostThread: 投稿スレッドデータの取得と管理
+ * - maxParentCount/maxChildrenCount: 表示する親/子投稿数の制御
+ * - deferParents: 親投稿の表示遅延制御（スクロール位置固定のため）
+ * - useUnstablePostSource: フィードソース情報の追跡
+ *
+ * 【外部連携】
+ * - ATプロトコルの投稿・返信API
+ * - フィードフィードバックシステム
+ * - コンポーザー（返信作成画面）との連携
+ *
+ * @param props.uri - 表示する投稿のURI
+ * @returns JSX要素 - 投稿スレッド画面のUI
+ */
 export function PostThread({uri}: {uri: string}) {
   const {gtMobile} = useBreakpoints()
   const {hasSession} = useSession()
@@ -71,6 +96,12 @@ export function PostThread({uri}: {uri: string}) {
   }, [thread.data.items])
 
   const {openComposer} = useOpenComposer()
+  /**
+   * 返信投稿成功時の楽観的更新処理
+   * - 投稿成功後、サーバーレスポンスを待たずにUIを即座に更新
+   * - ユーザー体験の向上（レスポンシブな操作感を提供）
+   * - 返信先URIと新しい投稿データを使ってスレッドに挿入
+   */
   const optimisticOnPostReply = useCallback(
     (payload: OnPostSuccessData) => {
       if (payload) {
@@ -251,12 +282,12 @@ export function PostThread({uri}: {uri: string}) {
   })
 
   /**
-   * Called any time the user changes thread params, such as `view` or `sort`.
-   * Prepares the UI for repositioning of the scroll so that the anchor post is
-   * always at the top after a params change.
-   *
-   * No need to handle max parents here, deferParents will handle that and we
-   * want it to re-render with the same items above the anchor.
+   * スレッドパラメータ変更時のUI準備処理
+   * - ビュー（リニア/ツリー）やソート順変更時に実行
+   * - アンカー投稿を画面上部に固定するためのスクロール位置調整準備
+   * - リストを切り詰めてアンカー投稿を最初のアイテムにする
+   * - 子投稿数を初期値にリセットして高速再レンダリングを実現
+   * - スクロールハンドリングフラグをセット
    */
   const prepareForParamsUpdate = useCallback(() => {
     /**
@@ -581,6 +612,21 @@ export function PostThread({uri}: {uri: string}) {
   )
 }
 
+/**
+ * モバイル用返信コンポーズプロンプトコンポーネント
+ *
+ * 【主な機能】
+ * - 画面下部に固定表示される返信入力プロンプト
+ * - フッター高さに応じた動的位置調整
+ * - モバイル環境でのクイック返信アクセス
+ *
+ * 【状態管理】
+ * - useShellLayout: シェルレイアウトのフッター高さ
+ * - useAnimatedStyle: アニメーション付きスタイル
+ *
+ * @param props.onPressReply - 返信ボタン押下時のコールバック
+ * @returns JSX要素 - 固定位置の返信プロンプト
+ */
 function MobileComposePrompt({onPressReply}: {onPressReply: () => unknown}) {
   const {footerHeight} = useShellLayout()
 

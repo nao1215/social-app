@@ -1,5 +1,26 @@
 import {type Route, type RouteParams} from './types'
 
+/**
+ * ルーティング管理クラス
+ *
+ * 【主な機能】
+ * - URL パターンマッチングと画面名の対応管理
+ * - パラメータ抽出とクエリストリング処理
+ * - 動的ルート生成とリバースルーティング
+ * - 複数パターン対応（同一画面に複数URL）
+ *
+ * 【使用場面】
+ * - アプリ内ナビゲーションの中枢管理
+ * - Deep Link処理とURL解析
+ * - SEO対応のURL生成
+ *
+ * 【技術的詳細】
+ * - 正規表現ベースの高速なパターンマッチング
+ * - TypeScript型安全性を保った柔軟なルート定義
+ * - URLSearchParamsによるクエリストリング処理
+ *
+ * @template T ルート名とパターンの型定義
+ */
 export class Router<T extends Record<string, any>> {
   routes: [string, Route][] = []
   constructor(description: Record<keyof T, string | string[]>) {

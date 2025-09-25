@@ -128,6 +128,30 @@ export interface FeedPage {
  */
 const MIN_POSTS = 30
 
+/**
+ * usePostFeedQuery
+ *
+ * 【主な機能】
+ * - 投稿フィードデータの無限スクロール取得とキャッシング
+ * - フィード種別（タイムライン、カスタムフィード、プロフィール等）に応じた適切なAPI呼び出し
+ * - モデレーション設定とフィルタリングの適用
+ * - フィードチューニング機能による投稿の並び替えとグループ化
+ *
+ * 【状態管理パターン】
+ * - TanStack Query の useInfiniteQuery によるページネーション管理
+ * - セレクター関数でデータ変換とメモ化を実装
+ * - 自動ページング機能で最小投稿数を保証
+ *
+ * 【外部連携】
+ * - BskyAgent を通じた AT Protocol API 通信
+ * - フィード API（Home、Custom、Author 等）との連携
+ * - ユーザー行動履歴とディスカバー機能との統合
+ *
+ * @param feedDesc - フィード識別子（'following', 'author|did|filter', 'feedgen|uri' 等）
+ * @param params - フィード取得パラメータ（マージフィード設定、キャッシュキー等）
+ * @param opts - 追加オプション（有効/無効、フィルター除外対象等）
+ * @returns TanStack Query の無限クエリ結果（投稿スライスのページネーション）
+ */
 export function usePostFeedQuery(
   feedDesc: FeedDescriptor,
   params?: FeedParams,
@@ -439,6 +463,25 @@ export function usePostFeedQuery(
   return query
 }
 
+/**
+ * pollLatest
+ *
+ * 【主な機能】
+ * - フィードの最新投稿をポーリング取得して新着確認
+ * - アプリがアクティブ状態でのみポーリング実行
+ * - ドライラン機能で実際の更新前に新着投稿を検証
+ *
+ * 【状態管理パターン】
+ * - 非同期処理によるリアルタイム更新チェック
+ * - FeedTuner による新着投稿の適格性判定
+ *
+ * 【外部連携】
+ * - FeedAPI の peekLatest() による最新投稿取得
+ * - React Native AppState でのアプリ状態監視
+ *
+ * @param page - 対象のフィードページデータ
+ * @returns 新着投稿が存在する場合は true、存在しない場合は false
+ */
 export async function pollLatest(page: FeedPage | undefined) {
   if (!page) {
     return false
@@ -461,6 +504,30 @@ export async function pollLatest(page: FeedPage | undefined) {
   return false
 }
 
+/**
+ * createApi
+ *
+ * 【主な機能】
+ * - フィード記述子に基づく適切なフィードAPI実装の生成
+ * - 各種フィードタイプ（Following、Author、Custom等）に対応するAPIファクトリ
+ * - マージフィードとフォールバック機能の統合管理
+ *
+ * 【状態管理パターン】
+ * - ファクトリーパターンによる API 実装の動的生成
+ * - フィードパラメータの型安全な処理
+ *
+ * 【外部連携】
+ * - 各種 FeedAPI 実装クラス（HomeFeedAPI、CustomFeedAPI等）の初期化
+ * - BskyAgent とユーザー興味データの連携
+ *
+ * @param feedDesc - フィード記述子
+ * @param feedParams - フィード固有のパラメータ
+ * @param feedTuners - フィードチューニング関数群
+ * @param userInterests - ユーザー興味データ（アルゴリズム用）
+ * @param agent - Bsky API エージェント
+ * @param enableFollowingToDiscoverFallback - フォローフィードからディスカバーへのフォールバック有効化
+ * @returns 指定されたフィードタイプに対応する FeedAPI インスタンス
+ */
 function createApi({
   feedDesc,
   feedParams,
@@ -518,6 +585,26 @@ function createApi({
   }
 }
 
+/**
+ * findAllPostsInQueryData
+ *
+ * 【主な機能】
+ * - QueryClient 内の全フィードキャッシュから指定 URI の投稿を検索
+ * - 引用投稿、リプライ投稿（親・ルート）も含む包括的な検索
+ * - ジェネレーター関数による効率的なメモリ使用とイテレーション
+ *
+ * 【状態管理パターン】
+ * - TanStack Query キャッシュデータの横断検索
+ * - Generator 関数による遅延評価とメモリ効率化
+ *
+ * 【外部連携】
+ * - QueryClient の getQueriesData() によるキャッシュアクセス
+ * - AT Protocol URI マッチング機能との連携
+ *
+ * @param queryClient - TanStack Query クライアントインスタンス
+ * @param uri - 検索対象の投稿 URI
+ * @returns 一致する PostView のジェネレーター
+ */
 export function* findAllPostsInQueryData(
   queryClient: QueryClient,
   uri: string,
@@ -573,6 +660,26 @@ export function* findAllPostsInQueryData(
   }
 }
 
+/**
+ * findAllProfilesInQueryData
+ *
+ * 【主な機能】
+ * - QueryClient 内の全フィードキャッシュから指定 DID のプロフィール情報を検索
+ * - 投稿作者、引用投稿作者、リプライ作者を含む包括的な検索
+ * - プロフィール情報の重複排除と効率的な取得
+ *
+ * 【状態管理パターン】
+ * - TanStack Query キャッシュからのプロフィールデータ抽出
+ * - Generator 関数による遅延評価とメモリ効率化
+ *
+ * 【外部連携】
+ * - QueryClient の getQueriesData() によるキャッシュアクセス
+ * - AT Protocol DID マッチング機能との連携
+ *
+ * @param queryClient - TanStack Query クライアントインスタンス
+ * @param did - 検索対象のユーザー DID
+ * @returns 一致する ProfileViewBasic のジェネレーター
+ */
 export function* findAllProfilesInQueryData(
   queryClient: QueryClient,
   did: string,
@@ -612,6 +719,26 @@ export function* findAllProfilesInQueryData(
   }
 }
 
+/**
+ * assertSomePostsPassModeration
+ *
+ * 【主な機能】
+ * - フィード内の投稿がモデレーション設定を通過するかを検証
+ * - 全投稿がフィルタリングされた場合のエラー処理
+ * - 未認証ユーザー向けの安全なコンテンツ表示保証
+ *
+ * 【状態管理パターン】
+ * - 投稿配列の同期的なモデレーション検証
+ * - エラーハンドリングによる不適切なフィード状態の防止
+ *
+ * 【外部連携】
+ * - AT Protocol のモデレーション機能との連携
+ * - ユーザーのモデレーション設定適用
+ *
+ * @param feed - 検証対象のフィード投稿配列
+ * @param moderationPrefs - 適用するモデレーション設定
+ * @throws Error - 表示可能な投稿が存在しない場合に KnownError.FeedSignedInOnly をスロー
+ */
 function assertSomePostsPassModeration(
   feed: AppBskyFeedDefs.FeedViewPost[],
   moderationPrefs: ModerationPrefs,
@@ -639,6 +766,25 @@ function assertSomePostsPassModeration(
   }
 }
 
+/**
+ * resetPostsFeedQueries
+ *
+ * 【主な機能】
+ * - 全投稿フィードクエリのキャッシュリセット
+ * - タイムアウト指定による遅延リセット実行
+ * - フィード更新時の一括キャッシュクリア
+ *
+ * 【状態管理パターン】
+ * - TanStack Query キャッシュの条件付きリセット
+ * - 非同期タイムアウトによる遅延実行
+ *
+ * 【外部連携】
+ * - QueryClient の resetQueries() による一括キャッシュ操作
+ * - クエリキー述語による対象フィルタリング
+ *
+ * @param queryClient - TanStack Query クライアントインスタンス
+ * @param timeout - リセット実行までの遅延時間（ミリ秒、デフォルト 0）
+ */
 export function resetPostsFeedQueries(queryClient: QueryClient, timeout = 0) {
   setTimeout(() => {
     queryClient.resetQueries({
@@ -647,6 +793,26 @@ export function resetPostsFeedQueries(queryClient: QueryClient, timeout = 0) {
   }, timeout)
 }
 
+/**
+ * resetProfilePostsQueries
+ *
+ * 【主な機能】
+ * - 特定ユーザーの投稿に関連するフィードクエリのキャッシュリセット
+ * - DID 指定による対象フィードの絞り込みリセット
+ * - プロフィール更新時の関連キャッシュクリア
+ *
+ * 【状態管理パターン】
+ * - TanStack Query キャッシュの条件付きリセット
+ * - DID ベースのクエリフィルタリング
+ *
+ * 【外部連携】
+ * - QueryClient の resetQueries() による選択的キャッシュ操作
+ * - クエリキー述語による DID マッチング
+ *
+ * @param queryClient - TanStack Query クライアントインスタンス
+ * @param did - 対象ユーザーの DID
+ * @param timeout - リセット実行までの遅延時間（ミリ秒、デフォルト 0）
+ */
 export function resetProfilePostsQueries(
   queryClient: QueryClient,
   did: string,
@@ -663,6 +829,25 @@ export function resetProfilePostsQueries(
   }, timeout)
 }
 
+/**
+ * isFeedPostSlice
+ *
+ * 【主な機能】
+ * - 任意の値がフィード投稿スライス型であるかの型ガード関数
+ * - TypeScript 型安全性の保証とランタイム検証
+ * - フィードデータの型判定による安全な型キャスト
+ *
+ * 【状態管理パターン】
+ * - TypeScript 型ガード関数による型安全性の確保
+ * - ランタイム型チェックによるデータ検証
+ *
+ * 【外部連携】
+ * - FeedPostSlice インターフェースとの型整合性チェック
+ * - フィードレンダリング時の安全な型判定
+ *
+ * @param v - 型チェック対象の任意の値
+ * @returns v が FeedPostSlice 型である場合 true、そうでなければ false
+ */
 export function isFeedPostSlice(v: any): v is FeedPostSlice {
   return (
     v && typeof v === 'object' && '_isFeedPostSlice' in v && v._isFeedPostSlice

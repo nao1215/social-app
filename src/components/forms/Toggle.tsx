@@ -1,19 +1,50 @@
+/**
+ * トグルコンポーネント（Checkbox、Radio、Switch）
+ *
+ * 【主な機能】
+ * - チェックボックス、ラジオボタン、スイッチの統一API
+ * - グループ機能による複数選択制御
+ * - インタラクション状態の視覚的フィードバック
+ * - 最大選択数制限機能
+ *
+ * 【デザインシステム】
+ * - テーマ対応（ライト・ダークモード）
+ * - 一貫した選択状態の視覚表現
+ * - アクセシビリティ対応（ARIA属性、スクリーンリーダー）
+ * - アニメーション付きの状態変化
+ *
+ * 【プラットフォーム対応】
+ * - Web: Checkbox形式での表示
+ * - Native: Switch形式での表示
+ * - 統一されたAPIでクロスプラットフォーム対応
+ *
+ * @module Toggle - フォームで使用される選択入力コンポーネント群
+ */
+
+// Reactコアライブラリ - コンポーネント作成とコンテキスト管理
 import React from 'react'
+// React Nativeコンポーネント - UI構築とインタラクション処理
 import {Pressable, type StyleProp, View, type ViewStyle} from 'react-native'
+// React Native Reanimated - 高性能アニメーションライブラリ
 import Animated, {LinearTransition} from 'react-native-reanimated'
 
-import {HITSLOP_10} from '#/lib/constants'
-import {isNative} from '#/platform/detection'
+// アプリ固有のライブラリとユーティリティ
+import {HITSLOP_10} from '#/lib/constants'       // タッチ領域拡張定数
+import {isNative} from '#/platform/detection'    // プラットフォーム検出
+// デザインシステム - 統一されたスタイリングとテーマ管理
 import {
-  atoms as a,
-  flatten,
-  native,
-  type TextStyleProp,
-  useTheme,
-  type ViewStyleProp,
+  atoms as a,          // アトミックスタイル
+  flatten,             // スタイル配列の平坦化
+  native,              // ネイティブ固有スタイル
+  type TextStyleProp,  // テキストスタイルプロパティ型
+  useTheme,            // テーマフック
+  type ViewStyleProp,  // ビュースタイルプロパティ型
 } from '#/alf'
+// インタラクション状態管理 - ホバー、フォーカス、プレス状態
 import {useInteractionState} from '#/components/hooks/useInteractionState'
+// チェックマークアイコン - 選択状態の視覚表示用
 import {CheckThick_Stroke2_Corner0_Rounded as Checkmark} from '#/components/icons/Check'
+// タイポグラフィコンポーネント
 import {Text} from '#/components/Typography'
 
 export type ItemState = {

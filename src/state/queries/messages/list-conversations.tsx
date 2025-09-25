@@ -27,6 +27,30 @@ export const RQKEY = (
 ) => [RQKEY_ROOT, status, readState]
 type RQPageParam = string | undefined
 
+/**
+ * useListConvosQuery
+ *
+ * 【主な機能】
+ * - メッセージ会話リストの無限スクロール取得とキャッシュ管理
+ * - 会話状態（承認済み/リクエスト）と読取状態によるフィルタリング
+ * - DMサービスAPIとの通信とページネーション管理
+ * - 20件ずつの効率的なバッチ処理
+ *
+ * 【状態管理パターン】
+ * - TanStack Query の useInfiniteQuery による無限スクロール実装
+ * - 会話状態と読取状態での複合クエリキー管理
+ * - enabledフラグによる条件付きクエリ実行
+ *
+ * 【外部連携】
+ * - BskyAgent の chat.bsky.convo.listConvos API 呼び出し
+ * - DM_SERVICE_HEADERS での適切なヘッダー設定
+ * - AT Protocol Chat API との統合
+ *
+ * @param enabled - クエリの有効/無効設定
+ * @param status - 会話状態フィルター（'request', 'accepted', または全部）
+ * @param readState - 読取状態フィルター（'all', 'unread'）
+ * @returns TanStack Queryの無限クエリ結果（会話リストページネーション）
+ */
 export function useListConvosQuery({
   enabled,
   status,
@@ -64,6 +88,28 @@ const ListConvosContext = createContext<{
 } | null>(null)
 ListConvosContext.displayName = 'ListConvosContext'
 
+/**
+ * useListConvos
+ *
+ * 【主な機能】
+ * - ListConvosContext から会話リストデータを取得
+ * - 承認済み会話とリクエスト会話の分類済みデータを提供
+ * - Contextが未設定の場合のエラーハンドリング
+ * - リアルタイム更新された最新の会話状態を反映
+ *
+ * 【状態管理パターン】
+ * - React Context による会話データの一元管理
+ * - TypeScript 型ガードによる安全なデータアクセス
+ * - 会話状態別の構造化されたデータ提供
+ *
+ * 【外部連携】
+ * - ListConvosProvider で提供される Context データとの連携
+ * - ChatBskyConvoDefs.ConvoView 型の会話データ利用
+ * - メッセージシステム全体での一貫した会話管理
+ *
+ * @returns 承認済み会話とリクエスト会話の分類済みオブジェクト
+ * @throws Error - ListConvosProvider の外で使用された場合
+ */
 export function useListConvos() {
   const ctx = useContext(ListConvosContext)
   if (!ctx) {
@@ -73,6 +119,28 @@ export function useListConvos() {
 }
 
 const empty = {accepted: [], request: []}
+/**
+ * ListConvosProvider
+ *
+ * 【主な機能】
+ * - メッセージ会話リストの Context 提供とセッション管理
+ * - ログイン状態による条件付き Provider 切り替え
+ * - 未ログイン時の空の会話リスト提供
+ * - ログイン済み時の実際のデータ提供への委謗
+ *
+ * 【状態管理パターン】
+ * - React Context パターンによる状態提供
+ * - セッション状態に基づくコンディショナルレンダリング
+ * - パフォーマンス最適化のための分層構造
+ *
+ * 【外部連携】
+ * - useSession でのユーザー認証状態確認
+ * - ListConvosProviderInner への実際の処理委謗
+ * - ListConvosContext での状態提供
+ *
+ * @param children - Contextを使用する子コンポーネント
+ * @returns Context Provider でラップされた子コンポーネント
+ */
 export function ListConvosProvider({children}: {children: React.ReactNode}) {
   const {hasSession} = useSession()
 
@@ -393,6 +461,28 @@ export function ListConvosProviderInner({
   )
 }
 
+/**
+ * useUnreadMessageCount
+ *
+ * 【主な機能】
+ * - 未読メッセージ数と新着通知状態の計算
+ * - 会話状態（承認済み/リクエスト）別の未読数管理
+ * - 現在開いている会話の除外とモデレーション適用
+ * - UI表示用のフォーマット済み数値とバッジ表示判定
+ *
+ * 【状態管理パターン】
+ * - useMemo による計算結果のメモ化とパフォーマンス最適化
+ * - 複数の依存状態に基づく再計算ロジック
+ * - モデレーション設定を含む包括的なフィルタリング
+ *
+ * 【外部連携】
+ * - useListConvos からの会話データ取得
+ * - useCurrentConvoId での現在会話状態連携
+ * - useModerationOpts でのモデレーション設定適用
+ * - calculateCount 関数での実際の数値計算
+ *
+ * @returns 未読数情報オブジェクト（count, numUnread, hasNew）
+ */
 export function useUnreadMessageCount() {
   const {currentConvoId} = useCurrentConvoId()
   const {currentAccount} = useSession()
@@ -473,6 +563,27 @@ export type ConvoListQueryData = {
   pages: Array<ChatBskyConvoListConvos.OutputSchema>
 }
 
+/**
+ * useOnMarkAsRead
+ *
+ * 【主な機能】
+ * - 指定した会話を既読状態に更新する関数を提供
+ * - クエリキャッシュへの楽観的更新適用
+ * - 全ての会話リストクエリに対する一括更新
+ * - unreadCount を 0 にリセットしてUIに即座反映
+ *
+ * 【状態管理パターン】
+ * - useCallback による関数メモ化とパフォーマンス最適化
+ * - TanStack Query の setQueriesData による楽観的更新
+ * - optimisticUpdate ヘルパー関数での安全な状態更新
+ *
+ * 【外部連携】
+ * - QueryClient の setQueriesData でのキャッシュ操作
+ * - RQKEY_ROOT ベースの全クエリへの一括適用
+ * - 会話IDマッチングによる特定会話の状態更新
+ *
+ * @returns 会話IDを受け取り既読状態に更新する関数
+ */
 export function useOnMarkAsRead() {
   const queryClient = useQueryClient()
 
@@ -536,6 +647,29 @@ export function getConvoFromQueryData(chatId: string, old: ConvoListQueryData) {
   return null
 }
 
+/**
+ * findAllProfilesInQueryData
+ *
+ * 【主な機能】
+ * - QueryClient 内の全会話リストキャッシュから指定DIDのプロフィールを検索
+ * - 会話メンバー情報からのプロフィールデータ抽出
+ * - Generator 関数による効率的なメモリ使用とイテレーション
+ * - 全ページと全会話メンバーを横断する包括的検索
+ *
+ * 【状態管理パターン】
+ * - TanStack Query キャッシュの横断検索
+ * - Generator 関数による遅延評価とメモリ効率化
+ * - 複数ページと複数会話間でのネストしたイテレーション
+ *
+ * 【外部連携】
+ * - QueryClient の getQueriesData() による全キャッシュアクセス
+ * - ChatBskyConvoListConvos データ構造との連携
+ * - 会話メンバーのDIDマッチング機能
+ *
+ * @param queryClient - TanStack Query クライアントインスタンス
+ * @param did - 検索対象のユーザーDID
+ * @returns 一致する会話メンバープロフィールのGenerator
+ */
 export function* findAllProfilesInQueryData(
   queryClient: QueryClient,
   did: string,

@@ -19,6 +19,28 @@ import {useDialogContext} from '#/components/Dialog'
 import {useSheetWrapper} from '#/components/Dialog/sheet-wrapper'
 import {useGlobalDialogsControlContext} from '#/components/dialogs/Context'
 
+/**
+ * リンクオープン管理フック
+ *
+ * 【主な機能】
+ * - 内部ブラウザまたは外部ブラウザでリンクを開く機能
+ * - Blueskyアプリ内URLとRSSフィードURLの特別な処理
+ * - ユーザーの設定に基づくブラウザ選択とアクセス許可管理
+ * - プロキシ経由でのURL配信とクリック統計の記録
+ *
+ * 【使用場面】
+ * - 投稿やプロフィール内のリンククリック処理
+ * - ブラウザ設定に基づく適切なブラウザの選択
+ * - 初回アクセス時のブラウザ選択同意ダイアログ表示
+ *
+ * 【技術的詳細】
+ * - Expo WebBrowserを使用した内部ブラウザ統合
+ * - React Native Linkingとのフォールバック機能
+ * - ダイアログ状態管理とネストしたダイアログの回避
+ * - iOS Page Sheetスタイルとテーマカラー連携
+ *
+ * @returns リンクを開くための非同期関数
+ */
 export function useOpenLink() {
   const enabled = useInAppBrowser()
   const t = useTheme()
@@ -26,6 +48,7 @@ export function useOpenLink() {
   const dialogContext = useDialogContext()
   const {inAppBrowserConsentControl} = useGlobalDialogsControlContext()
 
+  // リンクを開くメイン関数（設定と条件に基づく分岐処理）
   const openLink = useCallback(
     async (url: string, override?: boolean, shouldProxy?: boolean) => {
       if (isBskyRSSUrl(url) && isRelativeUrl(url)) {
@@ -74,6 +97,7 @@ export function useOpenLink() {
           return
         }
       }
+      // デフォルト: システムのデフォルトブラウザで開く
       Linking.openURL(url)
     },
     [enabled, inAppBrowserConsentControl, t, sheetWrapper, dialogContext],

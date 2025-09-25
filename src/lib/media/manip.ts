@@ -22,6 +22,23 @@ import {isAndroid, isIOS} from '#/platform/detection'
 import {type PickerImage} from './picker.shared'
 import {type Dimensions} from './types'
 
+/**
+ * 画像圧縮処理（必要時のみ）
+ *
+ * 【主な機能】
+ * - ファイルサイズが上限を超過している場合のみ圧縬実行
+ * - 画像品質とファイルサイズのバランス調整
+ * - 永続パスへの移動と一時ファイルのクリーンアップ
+ *
+ * 【使用場面】
+ * - 投稿用画像のアップロード前処理
+ * - ユーザーが選択した高解像度画像の最適化
+ * - モバイルデータ使用量の節約
+ *
+ * @param img 圧縮対象の画像情報
+ * @param maxSize 最大ファイルサイズ（バイト）
+ * @returns 圧縮された画像情報
+ */
 export async function compressIfNeeded(
   img: PickerImage,
   maxSize: number = POST_IMG_MAX.size,
@@ -55,6 +72,23 @@ export interface DownloadAndResizeOpts {
   timeout: number
 }
 
+/**
+ * 画像ダウンロードとリサイズ関数
+ *
+ * 【主な機能】
+ * - リモートURLから画像をダウンロード
+ * - 指定されたサイズと条件でリサイズ処理
+ * - 拡張子自動判定と適切なフォーマット選択
+ * - タイムアウト処理と一時ファイルの自動清掃
+ *
+ * 【使用場面】
+ * - アバターやヘッダー画像のリサイズ処理
+ * - 外部リンク画像のローカルキャッシュ生成
+ * - サムネイル作成処理
+ *
+ * @param opts ダウンロードとリサイズのオプション
+ * @returns リサイズされた画像情報
+ */
 export async function downloadAndResize(opts: DownloadAndResizeOpts) {
   let appendExt = 'jpeg'
   try {
@@ -250,6 +284,21 @@ async function moveToPermanentPath(path: string, ext: string): Promise<string> {
   return normalizePath(destinationPath)
 }
 
+/**
+ * 安全なファイル削除関数
+ *
+ * 【主な機能】
+ * - Android用のパス正規化処理
+ * - エラーハンドリングと例外キャッチ
+ * - アプリクラッシュを防ぐ安全な削除処理
+ *
+ * 【使用場面】
+ * - 一時ファイルのクリーンアップ
+ * - キャッシュファイルの管理
+ * - メモリリーク防止
+ *
+ * @param path 削除対象ファイルのパス
+ */
 export async function safeDeleteAsync(path: string) {
   // Normalize is necessary for Android, otherwise it doesn't delete.
   const normalizedPath = normalizePath(path)

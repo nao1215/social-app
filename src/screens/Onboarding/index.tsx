@@ -16,6 +16,28 @@ import {Portal} from '#/components/Portal'
 import {ENV} from '#/env'
 import {StepSuggestedAccounts} from './StepSuggestedAccounts'
 
+/**
+ * オンボーディング画面メインコンポーネント
+ *
+ * 【主な機能】
+ * - 新規ユーザー向けの段階的アプリ紹介フロー
+ * - 興味・関心の選択（フィード最適化）
+ * - プロフィール作成支援
+ * - おすすめアカウントの提案
+ * - A/Bテスト実験の統合管理
+ *
+ * 【状態管理】
+ * - useReducer: オンボーディング状態の管理（ステップ、選択内容等）
+ * - useGate: Statsigによる機能フラグ・A/Bテスト制御
+ * - interestsDisplayNames: 興味カテゴリの多言語表示名
+ *
+ * 【外部連携】
+ * - Statsig実験プラットフォーム（機能フラグ管理）
+ * - ATプロトコルのプロフィール・フォロー機能
+ * - 国際化システム（Lingui）
+ *
+ * @returns JSX要素 - オンボーディングフローのルートコンポーネント
+ */
 export function Onboarding() {
   const {_} = useLingui()
   const gate = useGate()

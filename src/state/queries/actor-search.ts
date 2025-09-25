@@ -44,6 +44,29 @@ export const RQKEY_PAGINATED = (query: string, limit?: number) => [
  * @param query 検索クエリ / Search query
  * @param enabled クエリを有効にするか / Whether to enable the query
  */
+/**
+ * useActorSearch
+ *
+ * 【主な機能】
+ * - ユーザー名、ハンドル、表示名によるアクター（ユーザー）検索
+ * - シンプルな一度の結果取得（ページネーションなし）
+ * - 1分間のキャッシュでパフォーマンス最適化
+ * - 条件付きクエリ実行で不必要なAPI呼び出しを防止
+ *
+ * 【状態管理パターン】
+ * - TanStack Query の useQuery による宣言的データ取得
+ * - クエリ有効性と検索語存在の両方をチェック
+ * - クエリキーベースのキャッシュ管理
+ *
+ * 【外部連携】
+ * - BskyAgent の searchActors API 呼び出し
+ * - AT Protocol のユーザー検索機能との連携
+ * - ProfileView 型のユーザー情報返却
+ *
+ * @param query - 検索対象の文字列（ユーザー名、ハンドル、表示名等）
+ * @param enabled - クエリの有効/無効設定（デフォルトtrue）
+ * @returns TanStack Query結果オブジェクト（ProfileView配列）
+ */
 export function useActorSearch({
   query,
   enabled,
@@ -73,6 +96,31 @@ export function useActorSearch({
  * @param enabled クエリを有効にするか / Whether to enable the query
  * @param maintainData 前のデータを保持するか / Whether to maintain previous data
  * @param limit 1ページあたりの結果数（デフォルト: 25） / Results per page (default: 25)
+ */
+/**
+ * useActorSearchPaginated
+ *
+ * 【主な機能】
+ * - アクター検索のページネーション対応版
+ * - 大量の検索結果を無限スクロールで効率的に読み込み
+ * - ページあたりの結果数をカスタマイズ可能
+ * - keepPreviousData によるスムーズなUI更新サポート
+ *
+ * 【状態管理パターン】
+ * - TanStack Query の useInfiniteQuery による無限スクロール実装
+ * - カーソルベースのページネーション管理
+ * - 5分間のロングキャッシュでパフォーマンス最適化
+ *
+ * 【外部連携】
+ * - BskyAgent の searchActors API によるページネーション付き検索
+ * - AT Protocol のカーソルベースページング機能活用
+ * - AppBskyActorSearchActors APIスキーマとの統合
+ *
+ * @param query - 検索対象の文字列
+ * @param enabled - クエリの有効/無効設定
+ * @param maintainData - 前のデータを保持してUIちらつきを防止するか
+ * @param limit - 1ページあたりの結果数（デフォルト25）
+ * @returns TanStack Query無限クエリ結果オブジェクト
  */
 export function useActorSearchPaginated({
   query,
@@ -117,6 +165,29 @@ export function useActorSearchPaginated({
  * @param queryClient クエリクライアント / Query client
  * @param did 検索対象のDID / Target DID to search for
  * @yields マッチしたプロフィールビュー / Matched profile views
+ */
+/**
+ * findAllProfilesInQueryData
+ *
+ * 【主な機能】
+ * - QueryClient 内の全アクター検索キャッシュから指定DIDのプロフィールを検索
+ * - 通常検索とページネーション検索の両方を横断検索
+ * - Generator 関数による効率的なメモリ使用とイテレーション
+ * - 全ページ間でのプロフィール重複排除と最新データ取得
+ *
+ * 【状態管理パターン】
+ * - TanStack Query キャッシュの横断検索
+ * - Generator 関数による遅延評価とメモリ効率化
+ * - 複数クエリタイプ間でのデータ統合
+ *
+ * 【外部連携】
+ * - QueryClient の getQueriesData() による全キャッシュアクセス
+ * - 通常検索とページネーション検索の両クエリキーに対応
+ * - AT Protocol DID マッチング機能
+ *
+ * @param queryClient - TanStack Query クライアントインスタンス
+ * @param did - 検索対象のユーザーDID
+ * @returns 一致するアクタープロフィールのGenerator
  */
 export function* findAllProfilesInQueryData(
   queryClient: QueryClient,

@@ -1,27 +1,60 @@
-import {Children} from 'react'
-import {type TextProps as RNTextProps} from 'react-native'
-import {type StyleProp, type TextStyle} from 'react-native'
-import {UITextView} from 'react-native-uitextview'
-import createEmojiRegex from 'emoji-regex'
-import type React from 'react'
+/**
+ * タイポグラフィシステム
+ *
+ * 【主な機能】
+ * - 統一されたフォントスタイルとサイズ管理
+ * - レスポンシブな行間計算
+ * - 絵文字の適切なレンダリング処理
+ * - プラットフォーム固有のテキスト最適化
+ *
+ * 【デザインシステム】
+ * - アトミックデザインに基づくテキストスタイル
+ * - スケーラブルなフォントサイズシステム
+ * - アクセシビリティ対応（フォントスケーリング）
+ * - 一貫したタイポグラフィ階層
+ *
+ * 【プラットフォーム対応】
+ * - Web: 相対的な行間とフォント最適化
+ * - iOS: システムフォントと絵文字の最適化
+ * - Android: ネイティブテキストレンダリング
+ *
+ * @module Typography - テキスト表示とスタイリングのコアシステム
+ */
 
-import {isNative} from '#/platform/detection'
-import {isIOS} from '#/platform/detection'
+// Reactコアライブラリ - 子要素の処理とReact型定義
+import {Children} from 'react'                      // 子要素の反復処理
+import {type TextProps as RNTextProps} from 'react-native'  // React Nativeテキストプロパティ型
+import {type StyleProp, type TextStyle} from 'react-native' // スタイル型定義
+import {UITextView} from 'react-native-uitextview' // UITextViewコンポーネント（iOS特化）
+import createEmojiRegex from 'emoji-regex'         // 絵文字検出用正規表現
+import type React from 'react'                     // React型定義
+
+// プラットフォーム検出 - レンダリング方法の分岐用
+import {isNative} from '#/platform/detection'      // ネイティブ環境判定
+import {isIOS} from '#/platform/detection'         // iOS環境判定
+// デザインシステム - フォント管理とスタイル適用
 import {type Alf, applyFonts, atoms, flatten} from '#/alf'
 
 /**
+ * テキストサイズと行間アトムから行間値を計算するユーティリティ
  * Util to calculate lineHeight from a text size atom and a leading atom
  *
- * Example:
+ * フォントサイズと相対的な行間値を組み合わせて、実際のピクセル値を計算する
+ *
+ * 使用例:
  *   `leading(atoms.text_md, atoms.leading_normal)` // => 24
+ *
+ * @param textSize - フォントサイズを含むスタイルオブジェクト
+ * @param leading - 行間比率を含むスタイルオブジェクト
+ * @returns 計算された行間値（ピクセル）
  */
 export function leading<
   Size extends {fontSize?: number},
   Leading extends {lineHeight?: number},
 >(textSize: Size, leading: Leading) {
-  const size = textSize?.fontSize || atoms.text_md.fontSize
-  const lineHeight = leading?.lineHeight || atoms.leading_normal.lineHeight
-  return Math.round(size * lineHeight)
+  const size = textSize?.fontSize || atoms.text_md.fontSize          // フォントサイズ取得（デフォルト：中サイズ）
+  const lineHeight = leading?.lineHeight || atoms.leading_normal.lineHeight  // 行間比率取得（デフォルト：通常）
+  return Math.round(size * lineHeight)  // フォントサイズと行間比率を乗算して四捨五入
 }
 
 /**

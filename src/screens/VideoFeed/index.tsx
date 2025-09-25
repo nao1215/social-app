@@ -124,6 +124,29 @@ function createThreeVideoPlayers(
   return [p1, p2, p3]
 }
 
+/**
+ * ビデオフィード画面メインコンポーネント
+ *
+ * 【主な機能】
+ * - フルスクリーン縦スクロール動画フィード表示
+ * - TikTok/Instagram Reels風のUXを提供
+ * - 複数動画プレーヤーの効率的管理（3つのプレーヤーを循環利用）
+ * - 自動再生・ループ機能
+ * - ライトボックスモードでの没入型体験
+ *
+ * 【状態管理】
+ * - setMinimalShellMode: シェルUI最小化（フルスクリーン表示）
+ * - setSystemUITheme: システムUI（ステータスバー等）のテーマ制御
+ * - useIsFocused: 画面フォーカス状態の追跡
+ *
+ * 【外部連携】
+ * - ATプロトコルの動画エンベッド機能
+ * - Expo AV動画プレーヤー
+ * - システムUI制御（ステータスバー、ナビゲーションバー）
+ *
+ * @param props - ナビゲーションプロパティ（未使用）
+ * @returns JSX要素 - ダークテーマの没入型動画フィード
+ */
 export function VideoFeed({}: NativeStackScreenProps<
   CommonNavigatorParams,
   'VideoFeed'
@@ -133,6 +156,12 @@ export function VideoFeed({}: NativeStackScreenProps<
 
   const t = useTheme()
   const setMinShellMode = useSetMinimalShellMode()
+  /**
+   * 画面フォーカス時の没入型表示制御
+   * - ミニマルシェルモードを有効化（ナビゲーションバー非表示）
+   * - ライトボックステーマを適用（動画視聴に最適化）
+   * - フォーカス離脱時に通常状態に復帰
+   */
   useFocusEffect(
     useCallback(() => {
       setMinShellMode(true)
@@ -287,6 +316,13 @@ function Feed() {
     [players, currentIndex, isFocused, currentSources, scrollGesture],
   )
 
+  /**
+   * 動画プレーヤーの状態更新処理
+   * - 現在・前・次の動画のプレーヤー状態を効率的に管理
+   * - 3つのプレーヤーを循環利用してメモリ使用量を最適化
+   * - モデレーション設定に応じた自動再生制御
+   * - プレーヤーソースの動的更新と再生制御
+   */
   const updateVideoState = useCallback(
     (index: number) => {
       if (!videos.length) return

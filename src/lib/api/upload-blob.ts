@@ -4,28 +4,53 @@ import {BskyAgent, ComAtprotoRepoUploadBlob} from '@atproto/api'
 import {safeDeleteAsync} from '#/lib/media/manip'
 
 /**
- * @param encoding Allows overriding the blob's type
+ * Blob（バイナリデータ）アップロード関数
+ *
+ * 【主な機能】
+ * - 様々な形式の入力（ファイルパス、Blob、Data URL）を統一的に処理
+ * - React NativeのJPEGアップロードバグ対応（.bin拡張子回避策）
+ * - プラットフォーム固有のファイルアクセス方法の統一
+ * - 一時ファイル管理とクリーンアップ処理
+ *
+ * 【使用場面】
+ * - 投稿画像のアップロード処理
+ * - 動画ファイルのアップロード処理
+ * - ユーザーアバター・ヘッダー画像の更新
+ *
+ * 【技術的詳細】
+ * - AndroidでのXMLHttpRequest使用（fetchの制限回避）
+ * - React Native issue #27099のJPEGバグ対策
+ * - 安全なファイル操作と自動クリーンアップ機能
+ *
+ * @param agent Bluesky APIエージェント
+ * @param input アップロード対象（ファイルパス | Blob | Data URL）
+ * @param encoding Blob形式の上書き指定（オプション）
+ * @returns アップロード結果レスポンス
  */
 export async function uploadBlob(
   agent: BskyAgent,
   input: string | Blob,
   encoding?: string,
 ): Promise<ComAtprotoRepoUploadBlob.Response> {
+  // file:// URIの場合
   if (typeof input === 'string' && input.startsWith('file:')) {
     const blob = await asBlob(input)
     return agent.uploadBlob(blob, {encoding})
   }
 
+  // 絶対パスの場合（file://プレフィックスを追加）
   if (typeof input === 'string' && input.startsWith('/')) {
     const blob = await asBlob(`file://${input}`)
     return agent.uploadBlob(blob, {encoding})
   }
 
+  // Data URLの場合（Base64エンコードされたデータ）
   if (typeof input === 'string' && input.startsWith('data:')) {
     const blob = await fetch(input).then(r => r.blob())
     return agent.uploadBlob(blob, {encoding})
   }
 
+  // 既にBlobオブジェクトの場合
   if (input instanceof Blob) {
     return agent.uploadBlob(input, {encoding})
   }

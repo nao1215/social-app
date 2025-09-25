@@ -62,6 +62,31 @@ import {Text} from '#/components/Typography'
 import type * as bsky from '#/types/bsky'
 import {Provider} from './State'
 
+/**
+ * スターターパック作成ウィザード画面コンポーネント
+ *
+ * 【主な機能】
+ * - 新規ユーザー向けのスターターパック（おすすめユーザー・フィード集）作成
+ * - 3ステップのウィザードフロー（詳細設定、プロフィール選択、フィード選択）
+ * - 既存スターターパックの編集機能
+ * - プロフィール・フィードの検索と選択機能
+ * - リアルタイムプレビューとOGカード生成
+ *
+ * 【状態管理】
+ * - useWizardState: ウィザードステップとフォームデータの管理
+ * - useStarterPackQuery: 既存スターターパック情報の取得
+ * - useCreateStarterPackMutation: 新規作成API
+ * - useEditStarterPackMutation: 編集API
+ *
+ * 【外部連携】
+ * - ATプロトコルのスターターパック機能
+ * - リスト・プロフィール・フィード検索API
+ * - OGカード画像生成サービス
+ * - Statsigイベント分析
+ *
+ * @param props.route - ナビゲーションルート（編集対象のrkey含む）
+ * @returns JSX要素 - スターターパック作成ウィザード
+ */
 export function Wizard({
   route,
 }: NativeStackScreenProps<

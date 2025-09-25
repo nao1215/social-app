@@ -8,6 +8,28 @@ import type * as bsky from '#/types/bsky'
 import {Button, type ButtonType} from '../util/forms/Button'
 import * as Toast from '../util/Toast'
 
+/**
+ * FollowButton - フォロー・アンフォローボタンコンポーネント
+ *
+ * 【主な機能】
+ * - ユーザーのフォロー・アンフォロー操作
+ * - フォロー状態に応じたボタン表示切り替え
+ * - 楽観的UI更新とエラーハンドリング
+ * - カスタマイズ可能なボタンスタイル
+ *
+ * 【レガシー情報】
+ * - プロフィール関連UIの重要コンポーネント
+ * - 従来のButtonコンポーネント使用
+ *
+ * 【アーキテクチャ】
+ * - useProfileFollowMutationQueueでの状態管理
+ * - シャドウプロフィール対応
+ * - ログコンテキストベースの分析追跡
+ * - Toastによるエラー通知
+ *
+ * @param props - プロフィール、スタイル設定、ログ情報、コールバック
+ * @returns JSX要素 - フォローボタン
+ */
 export function FollowButton({
   unfollowedType = 'inverted',
   followedType = 'default',

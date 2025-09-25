@@ -49,6 +49,29 @@ type Props = NativeStackScreenProps<
   'MessagesConversation'
 >
 
+/**
+ * メッセージ会話画面メインコンポーネント
+ *
+ * 【主な機能】
+ * - 年齢制限によるアクセス制御（年齢確認が必要な機能）
+ * - 1対1のプライベートメッセージ表示
+ * - リアルタイムメッセージの送受信
+ * - ブロック済みユーザーとの会話制限
+ * - メール認証必須チェック
+ *
+ * 【状態管理】
+ * - ConvoProvider: 会話データの状態管理
+ * - useCurrentConvoId: 現在アクティブな会話ID
+ * - useEmail: メール認証状態の確認
+ *
+ * 【外部連携】
+ * - ATプロトコルのダイレクトメッセージAPI
+ * - 年齢確認システムとの連携
+ * - メール認証システムとの連携
+ *
+ * @param props - ナビゲーションプロパティ（会話IDを含む）
+ * @returns JSX要素 - 年齢制限ラップ済みの会話画面
+ */
 export function MessagesConversationScreen(props: Props) {
   const {_} = useLingui()
   const aaCopy = useAgeAssuranceCopy()
@@ -61,6 +84,23 @@ export function MessagesConversationScreen(props: Props) {
   )
 }
 
+/**
+ * メッセージ会話画面内部コンポーネント
+ *
+ * 【主な機能】
+ * - 画面フォーカス時の会話ID設定とシェルモード制御
+ * - レスポンシブ対応（モバイル・Web）のUI表示制御
+ * - キーボード制御の有効化
+ * - 会話プロバイダーによるデータ管理
+ *
+ * 【状態管理】
+ * - setCurrentConvoId: アクティブ会話IDの設定
+ * - setMinimalShellMode: シェルUI表示モードの制御
+ * - useBreakpoints: レスポンシブブレークポイント
+ *
+ * @param props.route - ルートパラメータ（会話IDを含む）
+ * @returns JSX要素 - 会話画面のレイアウト
+ */
 export function MessagesConversationScreenInner({route}: Props) {
   const {gtMobile} = useBreakpoints()
   const setMinimalShellMode = useSetMinimalShellMode()
@@ -70,6 +110,12 @@ export function MessagesConversationScreenInner({route}: Props) {
 
   useEnableKeyboardControllerScreen(true)
 
+  /**
+   * 画面フォーカス時の初期化とクリーンアップ処理
+   * - 現在の会話IDを設定
+   * - Web環境でのシェルモード制御
+   * - フォーカス離脱時の状態リセット
+   */
   useFocusEffect(
     useCallback(() => {
       setCurrentConvoId(convoId)
@@ -122,8 +168,11 @@ function Inner() {
       !convoState.isFetchingHistory &&
       convoState.items.length === 0)
 
-  // Any time that we re-render the `Initializing` state, we have to reset `hasScrolled` to false. After entering this
-  // state, we know that we're resetting the list of messages and need to re-scroll to the bottom when they get added.
+  /**
+   * 会話初期化時のスクロール状態リセット処理
+   * - Initializingステートの再レンダリング時にhasScrolledをfalseにリセット
+   * - メッセージリストのリセット後に最下部への再スクロールを可能にする
+   */
   React.useEffect(() => {
     if (convoState.status === ConvoStatus.Initializing) {
       setHasScrolled(false)
@@ -209,8 +258,11 @@ function InnerReady({
   const emailDialogControl = useEmailDialogControl()
 
   /**
-   * Must be non-reactive, otherwise the update to open the global dialog will
-   * cause a re-render loop.
+   * メール認証必須チェックとダイアログ表示処理
+   * - 非リアクティブコールバックとして実装（再レンダリングループを防止）
+   * - メール未認証ユーザーに対する認証ダイアログの表示
+   * - 認証キャンセル時のナビゲーション処理（戻る or メッセージ一覧へ）
+   * - タイムアウトによる状態更新の遅延（シェルハンドラーとの競合回避）
    */
   const maybeBlockForEmailVerification = useNonReactiveCallback(() => {
     if (needsEmailVerification) {

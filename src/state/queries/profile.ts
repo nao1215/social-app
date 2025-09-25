@@ -79,6 +79,29 @@ export const profilesQueryKey = (handles: string[]) => [
  * @param did ユーザーDID / User DID
  * @param staleTime キャッシュ有効期限（デフォルト: 15秒） / Cache stale time (default: 15 seconds)
  */
+/**
+ * useProfileQuery
+ *
+ * 【主な機能】
+ * - 指定されたDIDのユーザープロフィール詳細データの取得とキャッシュ管理
+ * - 不安定キャッシュからのプレースホルダーデータ提供
+ * - ウィンドウフォーカス時の自動データ再取得
+ * - staleTime設定による適切なキャッシュライフサイクル管理
+ *
+ * 【状態管理パターン】
+ * - TanStack Query の useQuery による宣言的データ取得
+ * - プレースホルダーデータとしての不安定キャッシュ活用
+ * - DID有効性チェックによる条件付きクエリ実行
+ *
+ * 【外部連携】
+ * - BskyAgent を通じた AT Protocol API 通信
+ * - 不安定プロフィールキャッシュとの統合
+ * - プロフィール詳細データの型安全な取得
+ *
+ * @param did - 取得対象のユーザーDID（未定義の場合はクエリ無効化）
+ * @param staleTime - キャッシュ有効期限（デフォルト15秒、UI無限ループ防止のため必須）
+ * @returns TanStack Query結果オブジェクト（ProfileViewDetailed型）
+ */
 export function useProfileQuery({
   did,
   staleTime = STALE.SECONDS.FIFTEEN,
@@ -116,6 +139,29 @@ export function useProfileQuery({
  * @param handles ユーザーハンドルの配列 / Array of user handles
  * @param maintainData 前のデータを保持するか / Whether to maintain previous data
  */
+/**
+ * useProfilesQuery
+ *
+ * 【主な機能】
+ * - 複数のユーザープロフィールを一括取得してネットワーク効率を向上
+ * - ハンドル配列に基づく複数アカウント情報の同時取得
+ * - keepPreviousData による過去データの保持オプション
+ * - 5分間のキャッシュによるパフォーマンス最適化
+ *
+ * 【状態管理パターン】
+ * - TanStack Query の useQuery による複数データの一括管理
+ * - ハンドルベースのクエリキー設計
+ * - オプショナルなデータ保持によるUX向上
+ *
+ * 【外部連携】
+ * - BskyAgent の getProfiles API による一括取得
+ * - AT Protocol の効率的なバッチ処理活用
+ * - 複数プロフィールデータの型安全な管理
+ *
+ * @param handles - 取得対象のユーザーハンドル配列
+ * @param maintainData - 前のデータを保持するかの設定（keepPreviousData使用）
+ * @returns TanStack Query結果オブジェクト（複数プロフィールデータ）
+ */
 export function useProfilesQuery({
   handles,
   maintainData,
@@ -139,6 +185,27 @@ export function useProfilesQuery({
 /**
  * プロフィールを事前取得する関数を返すフック / Hook that returns a function to prefetch profiles
  * ユーザーがプロフィールを表示する前にデータをプリロードしてUXを向上 / Preload data before user views profile to improve UX
+ */
+/**
+ * usePrefetchProfileQuery
+ *
+ * 【主な機能】
+ * - プロフィール表示前のデータ事前取得によるUX向上
+ * - 非同期プリフェッチ関数の生成と提供
+ * - 30秒間のキャッシュによる効率的な事前取得
+ * - ユーザー操作に先立つ予測的データロード
+ *
+ * 【状態管理パターン】
+ * - TanStack Query の prefetchQuery による事前キャッシュ構築
+ * - useCallback による関数メモ化とパフォーマンス最適化
+ * - QueryClient を通じた手動キャッシュ管理
+ *
+ * 【外部連携】
+ * - BskyAgent による AT Protocol API の事前実行
+ * - プロフィールクエリキーとの整合性保証
+ * - メインクエリとの seamless な連携
+ *
+ * @returns プリフェッチ実行関数（DIDを受け取りプロフィールを事前取得）
  */
 export function usePrefetchProfileQuery() {
   const agent = useAgent() // Bluesky APIエージェント取得 / Get Bluesky API agent
@@ -177,6 +244,27 @@ interface ProfileUpdateParams {
 /**
  * プロフィール情報を更新するミューテーションフック / Hook for updating profile information
  * アバター、バナー、表示名、説明等の更新を行う / Handles updates for avatar, banner, display name, description, etc.
+ */
+/**
+ * useProfileUpdateMutation
+ *
+ * 【主な機能】
+ * - ユーザープロフィール情報の包括的更新処理
+ * - アバター・バナー画像のアップロードと設定
+ * - 表示名・説明文・固定投稿などのテキスト情報更新
+ * - 更新完了確認とキャッシュ無効化の自動実行
+ *
+ * 【状態管理パターン】
+ * - TanStack Query の useMutation による楽観的更新
+ * - 非同期画像アップロードとプロフィール更新の並行処理
+ * - whenAppViewReady による更新完了の確実な待機
+ *
+ * 【外部連携】
+ * - BskyAgent の upsertProfile API による AT Protocol 更新
+ * - uploadBlob による画像ファイルのバイナリアップロード
+ * - プロフィール認証キャッシュとの自動同期
+ *
+ * @returns プロフィール更新ミューテーションオブジェクト
  */
 export function useProfileUpdateMutation() {
   const queryClient = useQueryClient() // クエリクライアント取得 / Get query client
@@ -281,6 +369,30 @@ export function useProfileUpdateMutation() {
   })
 }
 
+/**
+ * useProfileFollowMutationQueue
+ *
+ * 【主な機能】
+ * - ユーザーフォロー/アンフォロー操作の楽観的更新とキューイング
+ * - 連続操作時のリクエスト重複防止と最終状態の保証
+ * - フォロー状態の即座UI反映と後続API実行
+ * - フォロー完了時の関連ユーザー推奨機能との連携
+ *
+ * 【状態管理パターン】
+ * - useToggleMutationQueue による操作キューイング管理
+ * - Shadow キャッシュによる楽観的UI更新
+ * - ユーザー行動履歴への操作記録
+ *
+ * 【外部連携】
+ * - BskyAgent のフォローAPI実行
+ * - Statsig ログイベントによる操作追跡
+ * - 進捗ガイドシステムとの統合
+ * - フォロー推奨アルゴリズムへのデータ提供
+ *
+ * @param profile - フォロー対象のプロフィール情報（Shadow型）
+ * @param logContext - ログイベント用のコンテキスト情報
+ * @returns [queueFollow, queueUnfollow] フォロー/アンフォロー実行関数のタプル
+ */
 export function useProfileFollowMutationQueue(
   profile: Shadow<bsky.profile.AnyProfileView>,
   logContext: LogEvents['profile:follow']['logContext'] &
@@ -398,6 +510,28 @@ function useProfileUnfollowMutation(
   })
 }
 
+/**
+ * useProfileMuteMutationQueue
+ *
+ * 【主な機能】
+ * - ユーザーミュート/ミュート解除操作の楽観的更新とキューイング
+ * - 連続ミュート操作時のリクエスト重複防止
+ * - ミュート状態の即座UI反映と後続API実行
+ * - ミュートアカウントリストキャッシュの自動無効化
+ *
+ * 【状態管理パターン】
+ * - useToggleMutationQueue による操作キューイング管理
+ * - Shadow キャッシュによる楽観的UI更新
+ * - ミュート状態のブール値管理
+ *
+ * 【外部連携】
+ * - BskyAgent のミュートAPI実行
+ * - マイミュートアカウントクエリとの連携
+ * - プロフィールキャッシュの即座更新
+ *
+ * @param profile - ミュート対象のプロフィール情報（Shadow型）
+ * @returns [queueMute, queueUnmute] ミュート/ミュート解除実行関数のタプル
+ */
 export function useProfileMuteMutationQueue(
   profile: Shadow<bsky.profile.AnyProfileView>,
 ) {
@@ -473,6 +607,28 @@ function useProfileUnmuteMutation() {
   })
 }
 
+/**
+ * useProfileBlockMutationQueue
+ *
+ * 【主な機能】
+ * - ユーザーブロック/ブロック解除操作の楽観的更新とキューイング
+ * - 連続ブロック操作時のリクエスト重複防止
+ * - ブロック状態の即座UI反映と後続API実行
+ * - 関連する投稿フィードとメッセージキャッシュの無効化
+ *
+ * 【状態管理パターン】
+ * - useToggleMutationQueue による操作キューイング管理
+ * - Shadow キャッシュによる楽観的UI更新
+ * - ブロックURI の管理と追跡
+ *
+ * 【外部連携】
+ * - AT Protocol のブロックレコード作成/削除API
+ * - プロフィール投稿クエリの遅延リセット
+ * - メッセージ会話リストとの自動同期
+ *
+ * @param profile - ブロック対象のプロフィール情報（Shadow型）
+ * @returns [queueBlock, queueUnblock] ブロック/ブロック解除実行関数のタプル
+ */
 export function useProfileBlockMutationQueue(
   profile: Shadow<bsky.profile.AnyProfileView>,
 ) {
@@ -583,6 +739,29 @@ async function whenAppViewReady(
   )
 }
 
+/**
+ * findAllProfilesInQueryData
+ *
+ * 【主な機能】
+ * - QueryClient 内の全プロフィールキャッシュから指定DIDのプロフィールを検索
+ * - 単一プロフィールクエリと複数プロフィールクエリの両方を横断検索
+ * - Generator 関数による効率的なメモリ使用とイテレーション
+ * - キャッシュされた全てのプロフィールバリエーションの包括的取得
+ *
+ * 【状態管理パターン】
+ * - TanStack Query キャッシュの横断検索
+ * - Generator 関数による遅延評価とメモリ効率化
+ * - 複数クエリタイプ間でのデータ統合
+ *
+ * 【外部連携】
+ * - QueryClient の getQueriesData() による全キャッシュアクセス
+ * - プロフィールクエリキーとプロフィール群クエリキーの両方を検索
+ * - AT Protocol DID マッチングによる正確な識別
+ *
+ * @param queryClient - TanStack Query クライアントインスタンス
+ * @param did - 検索対象のユーザーDID
+ * @returns 一致する ProfileViewDetailed の Generator
+ */
 export function* findAllProfilesInQueryData(
   queryClient: QueryClient,
   did: string,
@@ -615,6 +794,29 @@ export function* findAllProfilesInQueryData(
   }
 }
 
+/**
+ * findProfileQueryData
+ *
+ * 【主な機能】
+ * - QueryClient から指定DIDの単一プロフィールデータを直接取得
+ * - キャッシュされたプロフィール情報の即座アクセス
+ * - 存在しない場合の適切な undefined 戻り値
+ * - 型安全なプロフィールデータアクセス
+ *
+ * 【状態管理パターン】
+ * - TanStack Query の getQueryData() による同期的キャッシュアクセス
+ * - DID ベースのクエリキー使用
+ * - Optional 型による安全なデータ取得
+ *
+ * 【外部連携】
+ * - プロフィールクエリキーとの整合性保証
+ * - ProfileViewDetailed 型との型整合性
+ * - 他のプロフィール関連機能との連携基盤
+ *
+ * @param queryClient - TanStack Query クライアントインスタンス
+ * @param did - 検索対象のユーザーDID
+ * @returns キャッシュされた ProfileViewDetailed または undefined
+ */
 export function findProfileQueryData(
   queryClient: QueryClient,
   did: string,

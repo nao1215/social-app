@@ -122,10 +122,31 @@ import {useActivitySubscriptionsNudged} from '#/storage/hooks/activity-subscript
 type Props = NativeStackScreenProps<CommonNavigatorParams, 'Settings'>
 
 /**
- * 設定画面コンポーネント
- * ユーザーアカウント、プライバシー、セキュリティ、通知、アピアランスなど
- * アプリの全設定にアクセスできるメイン設定ハブ
- * マルチアカウント管理と開発者オプションも含む
+ * 設定画面メインコンポーネント
+ *
+ * 【主な機能】
+ * - ユーザーアカウント設定（プロフィール、プライバシー、セキュリティ）
+ * - アプリケーション設定（通知、アピアランス、言語、アクセシビリティ）
+ * - マルチアカウント管理（切り替え、追加、削除）
+ * - コンテンツモデレーション設定
+ * - 開発者オプション（内部ビルドのみ）
+ * - ログアウト機能
+ *
+ * 【状態管理】
+ * - showAccounts: アカウント一覧の表示切り替え
+ * - showDevOptions: 開発者オプションの表示切り替え
+ * - useSession: 現在のセッションとアカウント一覧
+ * - useProfileQuery: 現在のユーザープロフィールデータ
+ * - useAccountSwitcher: アカウント切り替え処理
+ *
+ * 【外部連携】
+ * - ATプロトコルサービスとの通信
+ * - デバイスストレージの読み書き
+ * - ヘルプデスクURLの外部ブラウザー起動
+ * - OTA更新システム（iOS）
+ *
+ * @param props - ナビゲーションプロパティ（使用されていない）
+ * @returns JSX要素 - 設定画面のUI
  */
 export function SettingsScreen({}: Props) {
   // 国際化フック - UI文字列の翻訳
@@ -363,6 +384,24 @@ export function SettingsScreen({}: Props) {
   )
 }
 
+/**
+ * プロフィールプレビューコンポーネント
+ *
+ * 【主な機能】
+ * - 現在のユーザーのアバター、表示名、ハンドルの表示
+ * - 本人確認バッジの表示（対象ユーザーのみ）
+ * - アクターのライブ状態表示
+ * - コンテンツモデレーションの適用
+ *
+ * 【状態管理】
+ * - useProfileShadow: キャッシュされたプロフィールデータ
+ * - useModerationOpts: モデレーション設定
+ * - useFullVerificationState: 本人確認状態
+ * - useActorStatus: アクターのオンライン状態
+ *
+ * @param props.profile - 表示するプロフィールデータ
+ * @returns JSX要素 - プロフィールプレビューUI
+ */
 function ProfilePreview({
   profile,
 }: {
@@ -433,6 +472,29 @@ function ProfilePreview({
   )
 }
 
+/**
+ * 開発者オプションコンポーネント
+ *
+ * 【主な機能】
+ * - システムログとストーリーブック画面への遷移
+ * - デバッグモードとモデレーション設定
+ * - オンボーディング状態のリセット
+ * - ストレージ完全クリア機能
+ * - OTA（Over-The-Air）更新の適用/取り消し
+ * - ポリシー更新のデバッグ機能
+ *
+ * 【状態管理】
+ * - useStorage: ポリシー更新デバッグオーバーライド設定
+ * - useApplyPullRequestOTAUpdate: OTA更新システム
+ * - useActivitySubscriptionsNudged: アクティビティ通知ナッジ状態
+ *
+ * 【外部連携】
+ * - EAS更新システム（Expo Application Services）
+ * - デバイスストレージの完全クリア
+ * - チャット宣言レコードの削除
+ *
+ * @returns JSX要素 - 開発者オプションUI（内部ビルドのみ表示）
+ */
 function DevOptions() {
   const {_} = useLingui()
   const agent = useAgent()

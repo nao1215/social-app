@@ -16,6 +16,28 @@ import {PlusLarge_Stroke2_Corner0_Rounded as Plus} from '#/components/icons/Plus
 import {Link} from '#/components/Link'
 import {Text} from '#/components/Typography'
 
+/**
+ * ホーム画面のフィードピン無し状態コンポーネント
+ *
+ * 【主な機能】
+ * - フィードが一つもピン止めされていない場合のプレースホルダー表示
+ * - デフォルトフィード（タイムライン＋ディスカバー）の自動セットアップ
+ * - カスタムフィード追加への誘導UI
+ * - フィードの初回利用促進
+ *
+ * 【状態管理】
+ * - useOverwriteSavedFeedsMutation: 保存済みフィードリストの一括更新
+ * - useHeaderOffset: ヘッダー高さに応じたレイアウト調整
+ * - preferences: ユーザーの現在のフィード設定
+ *
+ * 【外部連携】
+ * - ATプロトコルのフィード設定API
+ * - デフォルトフィード定数（タイムライン、ディスカバー）
+ * - フィード追加画面への遷移
+ *
+ * @param props.preferences - ユーザーの設定データ
+ * @returns JSX要素 - フィード未設定時の案内UI
+ */
 export function NoFeedsPinned({
   preferences,
 }: {
@@ -26,6 +48,12 @@ export function NoFeedsPinned({
   const {isPending, mutateAsync: overwriteSavedFeeds} =
     useOverwriteSavedFeedsMutation()
 
+  /**
+   * 推奨フィードの自動追加処理
+   * - タイムラインとディスカバーフィードを自動設定
+   * - 既存の同種フィードの重複を排除
+   * - 新規ユーザーの初期設定を簡素化
+   */
   const addRecommendedFeeds = React.useCallback(async () => {
     let skippedTimeline = false
     let skippedDiscover = false

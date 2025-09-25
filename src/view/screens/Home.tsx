@@ -48,6 +48,28 @@ import * as Layout from '#/components/Layout'                     // レイア�
 import {useDemoMode} from '#/storage/hooks/demo-mode'             // デモモード
 
 type Props = NativeStackScreenProps<HomeTabNavigatorParams, 'Home' | 'Start'>
+
+/**
+ * HomeScreen - ホーム画面コンポーネント
+ *
+ * 【主な機能】
+ * - ユーザーのピン留めフィード表示
+ * - ログアウト画面の条件的表示
+ * - Starter Pack遷移処理
+ * - ローディング状態管理
+ *
+ * 【レガシー情報】
+ * - 旧viewシステムのメイン画面実装
+ * - 新しいscreens構造への移行対象
+ *
+ * 【アーキテクチャ】
+ * - 設定とピン留めフィード情報の読み込み待ち
+ * - 準備完了後にHomeScreenReadyをレンダリング
+ * - URLパラメータ解析とルーティング制御
+ *
+ * @param props - ナビゲーションプロパティ
+ * @returns JSX要素 - ホーム画面
+ */
 export function HomeScreen(props: Props) {
   const {setShowLoggedOut} = useLoggedOutViewControls()
   const {data: preferences} = usePreferencesQuery()
@@ -106,6 +128,28 @@ export function HomeScreen(props: Props) {
   }
 }
 
+/**
+ * HomeScreenReady - ホーム画面準備完了状態コンポーネント
+ *
+ * 【主な機能】
+ * - ピン留めフィード間のタブ切り替え
+ * - フィード選択状態とページャー同期
+ * - 通知許可リクエスト処理
+ * - OTAアップデート監視
+ *
+ * 【レガシー情報】
+ * - Pagerベースの複数フィード表示
+ * - Statsigイベント追跡統合
+ *
+ * 【アーキテクチャ】
+ * - セッション状態による条件分岐レンダリング
+ * - デモモード対応の特殊表示
+ * - フィード種別（following/custom）別の空状態処理
+ * - マージフィード機能（実験的）統合
+ *
+ * @param props - 設定とピン留めフィード情報を含むプロパティ
+ * @returns JSX要素 - 準備完了ホーム画面
+ */
 function HomeScreenReady({
   preferences,
   pinnedFeedInfos,

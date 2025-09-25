@@ -37,6 +37,28 @@ import {ItemTextWithSubtitle} from './components/ItemTextWithSubtitle'
 const RQKEY = ['notification-permissions']
 
 type Props = NativeStackScreenProps<AllNavigatorParams, 'NotificationSettings'>
+/**
+ * 通知設定画面コンポーネント
+ *
+ * 【主な機能】
+ * - プッシュ通知の有効/無効制御
+ * - 通知カテゴリ別の詳細設定（いいね、リポスト、フォロー、メンション等）
+ * - デバイス権限の管理とリクエスト
+ * - プラットフォーム固有の通知設定への誘導
+ *
+ * 【状態管理】
+ * - useNotificationSettingsQuery: サーバー側通知設定の取得
+ * - useQuery: デバイスレベルの通知権限状態
+ * - useAppState: アプリ前面復帰時の権限状態更新
+ *
+ * 【外部連携】
+ * - Expo Notifications: ネイティブプッシュ通知システム
+ * - ATプロトコルの通知設定API
+ * - デバイス設定画面（iOS設定アプリ、Android設定）
+ *
+ * @param props - ナビゲーションプロパティ（未使用）
+ * @returns JSX要素 - 通知設定画面のUI
+ */
 export function NotificationSettingsScreen({}: Props) {
   const {_} = useLingui()
   const queryClient = useQueryClient()
@@ -51,6 +73,11 @@ export function NotificationSettingsScreen({}: Props) {
   })
 
   const appState = useAppState()
+  /**
+   * アプリ前面復帰時の通知権限状態更新
+   * - ユーザーが設定アプリで権限変更後、アプリに戻った際の状態同期
+   * - リアルタイムな権限状態の反映
+   */
   useEffect(() => {
     if (appState === 'active') {
       refetch()

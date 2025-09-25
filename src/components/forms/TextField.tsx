@@ -1,76 +1,122 @@
+/**
+ * テキストフィールドコンポーネント
+ *
+ * 【主な機能】
+ * - カスタマイズ可能なテキスト入力フィールド
+ * - アイコン、ラベル、サフィックステキストの統合サポート
+ * - バリデーション状態の視覚的フィードバック
+ * - インタラクション状態（ホバー、フォーカス）の管理
+ *
+ * 【デザインシステム】
+ * - テーマ対応（ライト・ダークモード）
+ * - 一貫したタイポグラフィとスペーシング
+ * - アクセシビリティ機能（ラベル、ヒント）
+ * - レスポンシブデザイン
+ *
+ * 【プラットフォーム対応】
+ * - Web: マウスイベント対応、カスタムスタイル
+ * - iOS/Android: ネイティブTextInputの最適化
+ * - キーボード外観の自動調整
+ *
+ * @module TextField - フォームで使用される汎用テキスト入力コンポーネント
+ */
+
+// Reactコアフック - コンテキスト、メモ化、参照管理
 import {createContext, useContext, useMemo, useRef} from 'react'
+// React Nativeコンポーネント - UI構築とテキスト入力機能
 import {
-  type AccessibilityProps,
-  StyleSheet,
-  TextInput,
-  type TextInputProps,
-  type TextStyle,
-  View,
-  type ViewStyle,
+  type AccessibilityProps,  // アクセシビリティプロパティ型
+  StyleSheet,              // スタイルシート作成
+  TextInput,               // テキスト入力コンポーネント
+  type TextInputProps,     // テキスト入力プロパティ型
+  type TextStyle,          // テキストスタイル型
+  View,                    // 基本ビューコンポーネント
+  type ViewStyle,          // ビュースタイル型
 } from 'react-native'
 
-import {HITSLOP_20} from '#/lib/constants'
-import {mergeRefs} from '#/lib/merge-refs'
+// アプリ固有のライブラリとユーティリティ
+import {HITSLOP_20} from '#/lib/constants'          // タッチ領域拡張定数
+import {mergeRefs} from '#/lib/merge-refs'          // 複数ref統合ユーティリティ
+// デザインシステム - 統一されたスタイリングとテーマ管理
 import {
-  android,
-  applyFonts,
-  atoms as a,
-  ios,
-  platform,
-  type TextStyleProp,
-  tokens,
-  useAlf,
-  useTheme,
-  web,
+  android,              // Android固有スタイル
+  applyFonts,          // フォント適用ユーティリティ
+  atoms as a,          // アトミックスタイル
+  ios,                 // iOS固有スタイル
+  platform,            // プラットフォーム固有処理
+  type TextStyleProp,  // テキストスタイルプロパティ型
+  tokens,              // デザイントークン
+  useAlf,              // ALFデザインシステムフック
+  useTheme,            // テーマフック
+  web,                 // Web固有スタイル
 } from '#/alf'
+// インタラクション状態管理 - ホバー、フォーカス、プレス状態
 import {useInteractionState} from '#/components/hooks/useInteractionState'
+// SVGアイコンコンポーネントの型定義
 import {type Props as SVGIconProps} from '#/components/icons/common'
+// タイポグラフィコンポーネント
 import {Text} from '#/components/Typography'
 
+// テキストフィールドコンテキスト - 子コンポーネント間での状態共有のため
 const Context = createContext<{
-  inputRef: React.RefObject<TextInput> | null
-  isInvalid: boolean
-  hovered: boolean
-  onHoverIn: () => void
-  onHoverOut: () => void
-  focused: boolean
-  onFocus: () => void
-  onBlur: () => void
+  inputRef: React.RefObject<TextInput> | null  // テキスト入力への参照
+  isInvalid: boolean                          // バリデーションエラー状態
+  hovered: boolean                            // ホバー状態
+  onHoverIn: () => void                       // ホバー開始ハンドラー
+  onHoverOut: () => void                      // ホバー終了ハンドラー
+  focused: boolean                            // フォーカス状態
+  onFocus: () => void                         // フォーカス取得ハンドラー
+  onBlur: () => void                          // フォーカス喪失ハンドラー
 }>({
-  inputRef: null,
-  isInvalid: false,
-  hovered: false,
-  onHoverIn: () => {},
-  onHoverOut: () => {},
-  focused: false,
-  onFocus: () => {},
-  onBlur: () => {},
+  inputRef: null,          // デフォルト: 参照なし
+  isInvalid: false,        // デフォルト: 有効
+  hovered: false,          // デフォルト: ホバーしていない
+  onHoverIn: () => {},     // デフォルト: 空関数
+  onHoverOut: () => {},    // デフォルト: 空関数
+  focused: false,          // デフォルト: フォーカスしていない
+  onFocus: () => {},       // デフォルト: 空関数
+  onBlur: () => {},        // デフォルト: 空関数
 })
 Context.displayName = 'TextFieldContext'
 
+// テキストフィールドのルートプロパティ型定義
 export type RootProps = React.PropsWithChildren<
-  {isInvalid?: boolean} & TextStyleProp
+  {isInvalid?: boolean} & TextStyleProp  // バリデーション状態とテキストスタイルプロパティ
 >
 
+/**
+ * テキストフィールドのルートコンポーネント
+ *
+ * テキストフィールド全体のコンテナとして機能し、子コンポーネント間での
+ * 状態共有とインタラクション管理を提供する
+ *
+ * @param children - 子要素（Input、Icon、LabelTextなど）
+ * @param isInvalid - バリデーションエラー状態
+ * @param style - カスタムスタイル
+ * @returns テキストフィールドのルートコンポーネント
+ */
 export function Root({children, isInvalid = false, style}: RootProps) {
-  const inputRef = useRef<TextInput>(null)
+  const inputRef = useRef<TextInput>(null)  // テキスト入力への参照
+  // ホバー状態管理 - マウスオーバー時の視覚的フィードバック
   const {
-    state: hovered,
-    onIn: onHoverIn,
-    onOut: onHoverOut,
+    state: hovered,      // ホバー状態
+    onIn: onHoverIn,     // ホバー開始
+    onOut: onHoverOut,   // ホバー終了
   } = useInteractionState()
+  // フォーカス状態管理 - キーボードフォーカス時の視覚的フィードバック
   const {state: focused, onIn: onFocus, onOut: onBlur} = useInteractionState()
 
+  // コンテキスト値をメモ化 - パフォーマンス最適化のため
   const context = useMemo(
     () => ({
-      inputRef,
-      hovered,
-      onHoverIn,
-      onHoverOut,
-      focused,
-      onFocus,
-      onBlur,
-      isInvalid,
+      inputRef,        // テキスト入力参照
+      hovered,         // ホバー状態
+      onHoverIn,       // ホバー開始ハンドラー
+      onHoverOut,      // ホバー終了ハンドラー
+      focused,         // フォーカス状態
+      onFocus,         // フォーカス取得ハンドラー
+      onBlur,          // フォーカス喪失ハンドラー
+      isInvalid,       // バリデーション状態
     }),
     [
       inputRef,
@@ -88,17 +134,18 @@ export function Root({children, isInvalid = false, style}: RootProps) {
     <Context.Provider value={context}>
       <View
         style={[
-          a.flex_row,
-          a.align_center,
-          a.relative,
-          a.w_full,
-          a.px_md,
-          style,
+          a.flex_row,      // 横並びレイアウト
+          a.align_center,  // 垂直中央揃え
+          a.relative,      // 相対位置指定
+          a.w_full,        // 全幅
+          a.px_md,         // 横方向パディング
+          style,           // カスタムスタイル
         ]}
         {...web({
-          onClick: () => inputRef.current?.focus(),
-          onMouseOver: onHoverIn,
-          onMouseOut: onHoverOut,
+          // Web専用: クリックでフォーカス、マウスイベント処理
+          onClick: () => inputRef.current?.focus(),  // クリック時にフォーカス
+          onMouseOver: onHoverIn,                    // マウスオーバー時
+          onMouseOut: onHoverOut,                    // マウスアウト時
         })}>
         {children}
       </View>
@@ -106,40 +153,52 @@ export function Root({children, isInvalid = false, style}: RootProps) {
   )
 }
 
+/**
+ * テキスト入力の共有スタイルフック
+ *
+ * 各種インタラクション状態（ホバー、フォーカス、エラー）に応じた
+ * 視覚的フィードバック用のスタイルオブジェクトを提供する
+ *
+ * @returns スタイルオブジェクト（ホバー、フォーカス、エラー状態用）
+ */
 export function useSharedInputStyles() {
-  const t = useTheme()
+  const t = useTheme()  // テーマ取得
   return useMemo(() => {
+    // ホバー状態のスタイル - マウスオーバー時の境界線色変更
     const hover: ViewStyle[] = [
       {
-        borderColor: t.palette.contrast_100,
+        borderColor: t.palette.contrast_100,  // 軽いコントラストの境界線
       },
     ]
+    // フォーカス状態のスタイル - アクティブ時の背景と境界線
     const focus: ViewStyle[] = [
       {
-        backgroundColor: t.palette.contrast_50,
-        borderColor: t.palette.primary_500,
+        backgroundColor: t.palette.contrast_50,  // 軽い背景色
+        borderColor: t.palette.primary_500,      // プライマリカラーの境界線
       },
     ]
+    // エラー状態のスタイル - バリデーション失敗時の視覚的フィードバック
     const error: ViewStyle[] = [
       {
-        backgroundColor: t.palette.negative_25,
-        borderColor: t.palette.negative_300,
+        backgroundColor: t.palette.negative_25,  // 軽いエラー背景色
+        borderColor: t.palette.negative_300,     // エラー色の境界線
       },
     ]
+    // エラー状態でのホバースタイル - エラー時のマウスオーバー強調
     const errorHover: ViewStyle[] = [
       {
-        backgroundColor: t.palette.negative_25,
-        borderColor: t.palette.negative_500,
+        backgroundColor: t.palette.negative_25,  // エラー背景色維持
+        borderColor: t.palette.negative_500,     // より強いエラー境界線色
       },
     ]
 
     return {
-      chromeHover: StyleSheet.flatten(hover),
-      chromeFocus: StyleSheet.flatten(focus),
-      chromeError: StyleSheet.flatten(error),
-      chromeErrorHover: StyleSheet.flatten(errorHover),
+      chromeHover: StyleSheet.flatten(hover),         // ホバー時のクロームスタイル
+      chromeFocus: StyleSheet.flatten(focus),         // フォーカス時のクロームスタイル
+      chromeError: StyleSheet.flatten(error),         // エラー時のクロームスタイル
+      chromeErrorHover: StyleSheet.flatten(errorHover), // エラーホバー時のクロームスタイル
     }
-  }, [t])
+  }, [t])  // テーマが変更された時に再計算
 }
 
 export type InputProps = Omit<TextInputProps, 'value' | 'onChangeText'> & {

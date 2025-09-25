@@ -55,6 +55,28 @@ import {styles} from './BottomBarStyles'
 
 type TabOptions = 'Home' | 'Search' | 'Messages' | 'Notifications' | 'MyProfile'
 
+/**
+ * BottomBar - ボトムナビゲーションバーコンポーネント
+ *
+ * 【主な機能】
+ * - 主要タブの表示（ホーム、検索、通知、メッセージ、プロフィール）
+ * - 未読数バッジ表示（通知・メッセージ）
+ * - ミニマルシェルモードでの表示・非表示制御
+ * - ハプティックフィードバック対応
+ *
+ * 【レガシー情報】
+ * - React Navigationのボトムタブバー実装
+ * - ログアウト時の特別UI表示
+ *
+ * 【アーキテクチャ】
+ * - タブ状態とナビゲーション状態の監視
+ * - セッション状態による条件分岐表示
+ * - アニメーション化された表示・非表示
+ * - アクセシビリティとハプティック統合
+ *
+ * @param props - navigation: React Navigationプロパティ
+ * @returns JSX要素 - ボトムナビゲーションバー
+ */
 export function BottomBar({navigation}: BottomTabBarProps) {
   const {hasSession, currentAccount} = useSession()
   const pal = usePalette('default')

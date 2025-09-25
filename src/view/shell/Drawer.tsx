@@ -58,6 +58,27 @@ import {VerificationCheck} from '#/components/verification/VerificationCheck'
 
 const iconWidth = 26
 
+/**
+ * DrawerProfileCard - ドロワー内プロフィールカードコンポーネント
+ *
+ * 【主な機能】
+ * - ユーザーアバターとプロフィール情報の表示
+ * - フォロワー・フォロイング数の表示
+ * - 認証バッジと活動状態表示
+ * - プロフィール画面への遷移
+ *
+ * 【レガシー情報】
+ * - SessionAccountベースの実装
+ * - 新しいプロフィールシステムと統合
+ *
+ * 【アーキテクチャ】
+ * - useProfileQueryでプロフィールデータ取得
+ * - 認証状態・活動状態をリアルタイム表示
+ * - 国際化対応（フォロワー数など）
+ *
+ * @param props - account: セッションアカウント, onPressProfile: プロフィール押下時コールバック
+ * @returns JSX要素 - プロフィールカード
+ */
 let DrawerProfileCard = ({
   account,
   onPressProfile,
@@ -142,6 +163,26 @@ let DrawerProfileCard = ({
 DrawerProfileCard = React.memo(DrawerProfileCard)
 export {DrawerProfileCard}
 
+/**
+ * DrawerContent - ドロワーメインコンテンツコンポーネント
+ *
+ * 【主な機能】
+ * - ナビゲーションメニュー項目の表示
+ * - セッション状態に応じたメニュー切り替え
+ * - タブ遷移とドロワー制御
+ * - Web/Nativeプラットフォーム対応
+ *
+ * 【レガシー情報】
+ * - 従来のナビゲーション構造を維持
+ * - 新しいNavigationシステムへ段階的移行
+ *
+ * 【アーキテクチャ】
+ * - 認証状態でメニュー項目を条件分岐
+ * - タブ状態管理とナビゲーション制御
+ * - プラットフォーム固有のナビゲーション処理
+ *
+ * @returns JSX要素 - ドロワーコンテンツ
+ */
 let DrawerContent = ({}: React.PropsWithoutRef<{}>): React.ReactNode => {
   const t = useTheme()
   const insets = useSafeAreaInsets()
@@ -333,6 +374,25 @@ let DrawerContent = ({}: React.PropsWithoutRef<{}>): React.ReactNode => {
 DrawerContent = React.memo(DrawerContent)
 export {DrawerContent}
 
+/**
+ * DrawerFooter - ドロワーフッターコンポーネント
+ *
+ * 【主な機能】
+ * - フィードバック・ヘルプボタンの配置
+ * - セーフエリア対応のパディング調整
+ * - 外部リンクへの遷移制御
+ *
+ * 【レガシー情報】
+ * - 固定的なフッター配置
+ * - デザインシステム（Alf）のButtonコンポーネント使用
+ *
+ * 【アーキテクチャ】
+ * - セーフエリアを考慮したレスポンシブ配置
+ * - 外部URL（フィードバックフォーム・ヘルプデスク）連携
+ *
+ * @param props - onPressFeedback: フィードバック押下, onPressHelp: ヘルプ押下
+ * @returns JSX要素 - ドロワーフッター
+ */
 let DrawerFooter = ({
   onPressFeedback,
   onPressHelp,
@@ -613,6 +673,27 @@ let SettingsMenuItem = ({onPress}: {onPress: () => void}): React.ReactNode => {
 }
 SettingsMenuItem = React.memo(SettingsMenuItem)
 
+/**
+ * MenuItem - ドロワーメニュー項目コンポーネント
+ *
+ * 【主な機能】
+ * - アイコンとラベルの統一表示
+ * - 未読数バッジの表示制御
+ * - ホバー・プレス状態のビジュアルフィードバック
+ * - アクセシビリティ対応
+ *
+ * 【レガシー情報】
+ * - 汎用的なメニュー項目実装
+ * - デザインシステム統合完了
+ *
+ * 【アーキテクチャ】
+ * - render propパターンによる状態管理
+ * - 条件付きバッジ表示とポジショニング
+ * - テーマシステム統合
+ *
+ * @param props - icon: アイコン要素, label: ラベル文字列, count: 未読数, bold: 太字表示, onPress: 押下コールバック
+ * @returns JSX要素 - メニュー項目
+ */
 function MenuItem({icon, label, count, bold, onPress}: MenuItemProps) {
   const t = useTheme()
   return (
@@ -685,6 +766,25 @@ function MenuItem({icon, label, count, bold, onPress}: MenuItemProps) {
   )
 }
 
+/**
+ * ExtraLinks - ドロワー内追加リンクコンポーネント
+ *
+ * 【主な機能】
+ * - 利用規約・プライバシーポリシーへのリンク
+ * - Kawaiiモード時のロゴクレジット表示
+ * - 外部ページへの遷移制御
+ *
+ * 【レガシー情報】
+ * - 法的文書へのアクセス提供
+ * - Bluesky固有の機能（Kawaiiモード）統合
+ *
+ * 【アーキテクチャ】
+ * - 条件付きコンテンツ表示（Kawaiiモード）
+ * - InlineLinkTextコンポーネント使用
+ * - 国際化対応のリンクテキスト
+ *
+ * @returns JSX要素 - 追加リンク群
+ */
 function ExtraLinks() {
   const {_} = useLingui()
   const t = useTheme()

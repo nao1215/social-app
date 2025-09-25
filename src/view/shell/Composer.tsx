@@ -6,6 +6,27 @@ import {useComposerState} from '#/state/shell/composer'
 import {atoms as a, useTheme} from '#/alf'
 import {ComposePost} from '../com/composer/Composer'
 
+/**
+ * Composer - 投稿作成コンポーザーコンポーネント
+ *
+ * 【主な機能】
+ * - 投稿作成フォームの表示・非表示制御
+ * - 画面下から上へのスライドアニメーション
+ * - モーダル形式での投稿作成インターフェース
+ * - アクセシビリティ対応
+ *
+ * 【レガシー情報】
+ * - シェル層での作成機能統合
+ * - 実際の投稿機能はComposePostコンポーネントに委譲
+ *
+ * 【アーキテクチャ】
+ * - useComposerStateでグローバル状態管理
+ * - Animated.Viewでスムーズなアニメーション
+ * - ウィンドウ高さベースの画面外配置
+ *
+ * @param props - winHeight: ウィンドウ高さ
+ * @returns JSX要素 - 投稿作成コンポーザー
+ */
 export function Composer({winHeight}: {winHeight: number}) {
   const state = useComposerState()
   const t = useTheme()

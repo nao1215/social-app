@@ -63,10 +63,26 @@ type Props = NativeStackScreenProps<
 >
 
 /**
- * 通知画面メインコンポーネント
- * 「すべて」と「メンション」の2つのタブを表示
- * Notifications screen main component
- * Displays two tabs: "All" and "Mentions"
+ * NotificationsScreen - 通知画面メインコンポーネント
+ *
+ * 【主な機能】
+ * - 「すべて」と「メンション」の2つのタブ表示
+ * - 未読通知数の表示とバッジクリア機能
+ * - 最新通知の読み込み・リフレッシュ機能
+ * - 通知設定へのリンクとフィルタリング
+ *
+ * 【レガシー情報】
+ * - 旧viewシステムの通知画面実装
+ * - タブ状態の手動管理（セッション中のみ永続化）
+ *
+ * 【アーキテクチャ】
+ * - Pagerベースのタブ切り替え機能
+ * - 未読通知APIとの統合
+ * - ソフトリセット対応
+ * - フォーカス時の自動リフレッシュ
+ *
+ * @param props - ナビゲーションプロパティ（未使用）
+ * @returns JSX要素 - 通知画面
  */
 export function NotificationsScreen({}: Props) {
   const {_} = useLingui()                                    // 国際化

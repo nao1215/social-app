@@ -53,6 +53,28 @@ interface SectionRef {
 }
 
 type Props = NativeStackScreenProps<CommonNavigatorParams, 'Profile'>
+
+/**
+ * ProfileScreen - プロフィール画面コンポーネンツ
+ *
+ * 【主な機能】
+ * - ユーザープロフィール情報と投稿一覧表示
+ * - タブ切り替え（投稿・リプライ・メディアなど）
+ * - フォロー・ブロックなどのアクション
+ * - 自分のプロフィール時の特別機能
+ *
+ * 【レガシー情報】
+ * - 旧viewシステムのプロフィール実装
+ * - 新しいscreens/Profileへ移行中
+ *
+ * 【アーキテクチャ】
+ * - Layout.ScreenでラップしProfileScreenInnerを表示
+ * - プロフィール解決とローディング状態管理
+ * - モデレーションとエラーハンドリング
+ *
+ * @param props - ナビゲーションプロパティ
+ * @returns JSX要素 - プロフィール画面
+ */
 export function ProfileScreen(props: Props) {
   return (
     <Layout.Screen testID="profileScreen" style={[a.pt_0]}>
@@ -61,6 +83,28 @@ export function ProfileScreen(props: Props) {
   )
 }
 
+/**
+ * ProfileScreenInner - プロフィール画面内部コンポーネント
+ *
+ * 【主な機能】
+ * - DID解決とプロフィールデータ取得
+ * - ローディング・エラー状態の処理
+ * - ハードコードリダイレクト処理
+ * - ブロック状態での投稿クエリリセット
+ *
+ * 【レガシー情報】
+ * - name='me'の特別処理（自分のプロフィール）
+ * - プロフィールヘッダーローディング表示
+ *
+ * 【アーキテクチャ】
+ * - useResolveDidQueryでハンドルからDID変換
+ * - useProfileQueryでプロフィール情報取得
+ * - エラー時はErrorScreen表示
+ * - 成功時はProfileScreenLoadedへ委譲
+ *
+ * @param props - routeパラメータ
+ * @returns JSX要素 - プロフィール内部コンポーネント
+ */
 function ProfileScreenInner({route}: Props) {
   const {_} = useLingui()
   const {currentAccount} = useSession()
@@ -154,6 +198,28 @@ function ProfileScreenInner({route}: Props) {
   )
 }
 
+/**
+ * ProfileScreenLoaded - プロフィールデータ読み込み完了状態コンポーネント
+ *
+ * 【主な機能】
+ * - プロフィールヘッダーとタブベースコンテンツ表示
+ * - タブ切り替え（投稿・リプライ・メディア・ライクなど）
+ * - ラベラー用フィルタータブ表示
+ * - 投稿作成フローティングアクションボタン
+ *
+ * 【レガシー情報】
+ * - PagerWithHeaderでのタブ切り替え実装
+ * - プロフィールシャドウでのキャッシュ管理
+ *
+ * 【アーキテクチャ】
+ * - 種別別タブ表示条件の動的判定
+ * - 各タブのインデックス管理とスクロール制御
+ * - モデレーション統合とスクリーンハイダー
+ * - RichText解決とプレースホルダー表示
+ *
+ * @param props - プロフィールデータと表示オプション
+ * @returns JSX要素 - プロフィールメインコンテンツ
+ */
 function ProfileScreenLoaded({
   profile: profileUnshadowed,
   isPlaceholderProfile,
@@ -515,6 +581,26 @@ function ProfileScreenLoaded({
   )
 }
 
+/**
+ * useRichText - RichText解決カスタムフック
+ *
+ * 【主な機能】
+ * - テキストからRichTextオブジェクト生成
+ * - ファセット解決（リンク・メンションなど）
+ * - 解決状態管理とフォールバック
+ *
+ * 【レガシー情報】
+ * - AT ProtocolのRichText API使用
+ * - プロフィール説明文のRichText化
+ *
+ * 【アーキテクチャ】
+ * - テキスト変更時の自動再解決
+ * - 非同期ファセット検出処理
+ * - メモ化と競合状態回避
+ *
+ * @param text - 解決対象テキスト
+ * @returns [RichTextAPI, 解決中フラグ] - 解決済みRichTextと解決状態
+ */
 function useRichText(text: string): [RichTextAPI, boolean] {
   const agent = useAgent()
   const [prevText, setPrevText] = React.useState(text)

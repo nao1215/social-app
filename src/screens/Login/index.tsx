@@ -27,6 +27,30 @@ enum Forms {
   PasswordUpdated,
 }
 
+/**
+ * ログイン画面メインコンポーネント
+ *
+ * 【主な機能】
+ * - 複数のログインフォーム（ログイン、アカウント選択、パスワード再設定等）の管理
+ * - フォーム間のナビゲーション制御
+ * - サービスプロバイダーとの通信エラーハンドリング
+ * - ログイン分析データの収集
+ *
+ * 【状態管理】
+ * - currentForm: 現在表示中のフォーム種別
+ * - serviceUrl: 使用するATプロトコルサービスURL
+ * - error: エラーメッセージ表示用状態
+ * - useSession: セッション管理（既存アカウント一覧）
+ * - useServiceQuery: サービス情報取得クエリ
+ *
+ * 【外部連携】
+ * - ATプロトコルサービスとの通信
+ * - Statsigによるイベント分析
+ * - セッション管理との連携
+ *
+ * @param props.onPressBack - 戻るボタン押下時のコールバック
+ * @returns JSX要素 - ログイン画面のUI
+ */
 export const Login = ({onPressBack}: {onPressBack: () => void}) => {
   const {_} = useLingui()
   const failedAttemptCountRef = useRef(0)
@@ -72,6 +96,12 @@ export const Login = ({onPressBack}: {onPressBack: () => void}) => {
     setCurrentForm(form)
   }
 
+  /**
+   * サービス接続エラーの監視とエラー表示制御
+   * - サービスプロバイダーとの通信失敗時にユーザーフレンドリーなエラーメッセージを表示
+   * - ログとStatsigイベントを送信してエラー分析データを収集
+   * - 正常接続時はエラー状態をクリア
+   */
   React.useEffect(() => {
     if (serviceError) {
       setError(
@@ -100,6 +130,11 @@ export const Login = ({onPressBack}: {onPressBack: () => void}) => {
     })
   }
 
+  /**
+   * ログイン成功時の処理
+   * - 成功イベントをStatsigに送信（カスタムプロバイダー使用有無、所要時間、失敗回数を記録）
+   * - フォーム状態をLogin画面にリセット
+   */
   const onAttemptSuccess = () => {
     logEvent('signin:success', {
       isUsingCustomProvider: serviceUrl !== DEFAULT_SERVICE,
@@ -109,6 +144,10 @@ export const Login = ({onPressBack}: {onPressBack: () => void}) => {
     setCurrentForm(Forms.Login)
   }
 
+  /**
+   * ログイン失敗時の処理
+   * - 失敗回数カウンターをインクリメント（分析データ用）
+   */
   const onAttemptFailed = () => {
     failedAttemptCountRef.current += 1
   }
