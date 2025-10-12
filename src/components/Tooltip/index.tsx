@@ -8,26 +8,26 @@ import {
   useRef,
   useState,
 } from 'react'
-import {useWindowDimensions, View} from 'react-native'
-import Animated, {Easing, ZoomIn} from 'react-native-reanimated'
-import {useSafeAreaInsets} from 'react-native-safe-area-context'
+import { useWindowDimensions, View } from 'react-native'
+import Animated, { Easing, ZoomIn } from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import {atoms as a, select, useTheme} from '#/alf'
-import {useOnGesture} from '#/components/hooks/useOnGesture'
-import {Portal} from '#/components/Portal'
+import { atoms as a, select, useTheme } from '#/alf'
+import { useOnGesture } from '#/components/hooks/useOnGesture'
+import { Portal } from '#/components/Portal'
 import {
   ARROW_HALF_SIZE,
   ARROW_SIZE,
   BUBBLE_MAX_WIDTH,
   MIN_EDGE_SPACE,
 } from '#/components/Tooltip/const'
-import {Text} from '#/components/Typography'
+import { Text } from '#/components/Typography'
 
 /**
- * These are native specific values, not shared with web
+ * Tooltipコンポーネントはターゲット要素の座標計測を利用してネイティブUI上の吹き出しを表示する。
  */
-const ARROW_VISUAL_OFFSET = ARROW_SIZE / 1.25 // vibes-based, slightly off the target
-const BUBBLE_SHADOW_OFFSET = ARROW_SIZE / 3 // vibes-based, provide more shadow beneath tip
+const ARROW_VISUAL_OFFSET = ARROW_SIZE / 1.25 // 視覚的な中心合わせのため先端位置を微調整
+const BUBBLE_SHADOW_OFFSET = ARROW_SIZE / 3 // 先端下に影が落ちるよう影の開始位置を調整
 
 type TooltipContextType = {
   position: 'top' | 'bottom'
@@ -51,17 +51,20 @@ type TargetContextType = {
 const TooltipContext = createContext<TooltipContextType>({
   position: 'bottom',
   visible: false,
-  onVisibleChange: () => {},
+  onVisibleChange: () => { },
 })
 TooltipContext.displayName = 'TooltipContext'
 
 const TargetContext = createContext<TargetContextType>({
   targetMeasurements: undefined,
-  setTargetMeasurements: () => {},
+  setTargetMeasurements: () => { },
   shouldMeasure: false,
 })
 TargetContext.displayName = 'TargetContext'
 
+/**
+ * Outerはツールチップの表示状態とターゲット計測結果をコンテキスト経由で子要素に共有する。
+ */
 export function Outer({
   children,
   position = 'bottom',
@@ -74,18 +77,16 @@ export function Outer({
   onVisibleChange: (visible: boolean) => void
 }) {
   /**
-   * Lagging state to track the externally-controlled visibility of the
-   * tooltip, which needs to wait for the target to be measured before
-   * actually being shown.
+   * 外部入力に合わせつつターゲット計測完了までは表示を保留する遅延用ステート。
    */
   const [visible, setVisible] = useState<boolean>(false)
   const [targetMeasurements, setTargetMeasurements] = useState<
     | {
-        x: number
-        y: number
-        width: number
-        height: number
-      }
+      x: number
+      y: number
+      width: number
+      height: number
+    }
     | undefined
   >(undefined)
 
@@ -97,7 +98,7 @@ export function Outer({
   }
 
   const ctx = useMemo(
-    () => ({position, visible, onVisibleChange}),
+    () => ({ position, visible, onVisibleChange }),
     [position, visible, onVisibleChange],
   )
   const targetCtx = useMemo(
@@ -118,18 +119,21 @@ export function Outer({
   )
 }
 
-export function Target({children}: {children: React.ReactNode}) {
-  const {shouldMeasure, setTargetMeasurements} = useContext(TargetContext)
+/**
+ * Targetは計測対象となる子要素を保持し、必要時にネイティブ座標を取得する。
+ */
+export function Target({ children }: { children: React.ReactNode }) {
+  const { shouldMeasure, setTargetMeasurements } = useContext(TargetContext)
   const targetRef = useRef<View>(null)
 
   useEffect(() => {
     if (!shouldMeasure) return
     /*
-     * Once opened, measure the dimensions and position of the target
+     * ツールチップ表示のタイミングでターゲットのサイズと位置を測定する。
      */
     targetRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
       if (pageX !== undefined && pageY !== undefined && width && height) {
-        setTargetMeasurements({x: pageX, y: pageY, width, height})
+        setTargetMeasurements({ x: pageX, y: pageY, width, height })
       }
     })
   }, [shouldMeasure, setTargetMeasurements])
@@ -141,6 +145,9 @@ export function Target({children}: {children: React.ReactNode}) {
   )
 }
 
+/**
+ * Contentはコンテキストの状態に応じてPortal内に吹き出しを描画する。
+ */
 export function Content({
   children,
   label,
@@ -148,8 +155,8 @@ export function Content({
   children: React.ReactNode
   label: string
 }) {
-  const {position, visible, onVisibleChange} = useContext(TooltipContext)
-  const {targetMeasurements} = useContext(TargetContext)
+  const { position, visible, onVisibleChange } = useContext(TooltipContext)
+  const { targetMeasurements } = useContext(TargetContext)
   const requestClose = useCallback(() => {
     onVisibleChange(false)
   }, [onVisibleChange])
@@ -162,8 +169,7 @@ export function Content({
         label={label}
         position={position}
         /*
-         * Gotta pass these in here. Inside the Bubble, we're Potal-ed outside
-         * the context providers.
+         * Portal配下ではコンテキストが届かないため計測情報と閉じる処理を明示的に渡す。
          */
         targetMeasurements={targetMeasurements}
         requestClose={requestClose}>
@@ -173,6 +179,9 @@ export function Content({
   )
 }
 
+/**
+ * Bubbleは計算済み座標を利用して吹き出し本体と矢印を表示する。
+ */
 function Bubble({
   children,
   label,
@@ -194,11 +203,14 @@ function Bubble({
   const dimensions = useWindowDimensions()
   const [bubbleMeasurements, setBubbleMeasurements] = useState<
     | {
-        width: number
-        height: number
-      }
+      width: number
+      height: number
+    }
     | undefined
   >(undefined)
+  /**
+   * バブルのサイズと画面寸法から最終的な表示位置と矢印の向きを算出する。
+   */
   const coords = useMemo(() => {
     if (!bubbleMeasurements)
       return {
@@ -210,10 +222,10 @@ function Bubble({
         tipLeft: 0,
       }
 
-    const {width: ww, height: wh} = dimensions
+    const { width: ww, height: wh } = dimensions
     const maxTop = insets.top
     const maxBottom = wh - insets.bottom
-    const {width: cw, height: ch} = bubbleMeasurements
+    const { width: cw, height: ch } = bubbleMeasurements
     const minLeft = MIN_EDGE_SPACE
     const maxLeft = ww - minLeft
 
@@ -290,7 +302,7 @@ function Bubble({
   useOnGesture(
     useCallback(
       e => {
-        const {x, y} = e
+        const { x, y } = e
         const isInside =
           x > coords.left &&
           x < coords.right &&
@@ -311,9 +323,9 @@ function Bubble({
       role="alert"
       accessibilityHint=""
       accessibilityLabel={label}
-      // android
+      // Android向け設定
       importantForAccessibility="yes"
-      // ios
+      // iOS向け設定
       accessibilityViewIsModal
       style={[
         a.absolute,
@@ -327,7 +339,7 @@ function Bubble({
       ]}>
       <Animated.View
         entering={ZoomIn.easing(Easing.out(Easing.exp))}
-        style={{transformOrigin: oppposite(position)}}>
+        style={{ transformOrigin: oppposite(position) }}>
         <View
           style={[
             a.absolute,
@@ -344,7 +356,7 @@ function Bubble({
               borderBottomRightRadius: a.rounded_2xs.borderRadius,
               width: ARROW_SIZE,
               height: ARROW_SIZE,
-              transform: [{rotate: '45deg'}],
+              transform: [{ rotate: '45deg' }],
               top: coords.tipTop,
               left: coords.tipLeft,
             },
@@ -385,6 +397,7 @@ function Bubble({
 }
 
 function oppposite(position: 'top' | 'bottom') {
+  // 表示位置に応じてアニメーションの基準点を切り替える。
   switch (position) {
     case 'top':
       return 'center bottom'
@@ -395,7 +408,10 @@ function oppposite(position: 'top' | 'bottom') {
   }
 }
 
-export function TextBubble({children}: {children: React.ReactNode}) {
+/**
+ * TextBubbleは文字列を簡潔なツールチップとして表示するためのラッパー。
+ */
+export function TextBubble({ children }: { children: React.ReactNode }) {
   const c = Children.toArray(children)
   return (
     <Content label={c.join(' ')}>
