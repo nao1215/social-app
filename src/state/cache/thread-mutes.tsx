@@ -46,7 +46,7 @@ export function Provider({children}: React.PropsWithChildren<{}>) {
   useMigrateMutes(setThreadMute)
 
   return (
-    {/* スレッドミュート状態を子コンポーネントに提供 */}
+    // スレッドミュート状態を子コンポーネントに提供
     <stateContext.Provider value={state}>
       {/* スレッドミュート設定関数を子コンポーネントに提供 */}
       <setStateContext.Provider value={setThreadMute}>

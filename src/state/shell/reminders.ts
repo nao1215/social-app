@@ -1,3 +1,19 @@
+/**
+ * リマインダー管理モジュール
+ * メール確認などのユーザーリマインダーの表示制御とスヌーズ機能を提供する
+ * 永続化ストレージを使用してリマインダーの状態を管理し、
+ * ユーザー体験を損なわないタイミングで通知を表示する
+ *
+ * Reminder management module
+ * Provides display control and snooze functionality for user reminders such as email confirmation
+ * Manages reminder state using persistent storage and displays notifications
+ * at times that don't degrade user experience
+ *
+ * Goユーザー向け補足 / Note for Go developers:
+ * - このモジュールは永続化ストレージ（localStorage相当）を使用します
+ * - export functionはGoのパッケージレベル関数に相当します
+ */
+
 // 日付比較ユーティリティをインポート / Import date comparison utility
 import {simpleAreDatesEqual} from '#/lib/strings/time'
 // ロガー機能をインポート / Import logger functionality
@@ -28,31 +44,47 @@ export function shouldRequestEmailConfirmation(account: SessionAccount) {
   if (isOnboardingActive()) return false
 
   const snoozedAt = persisted.get('reminders').lastEmailConfirm
+  // 現在の日付を取得 / Get current date
   const today = new Date()
 
+  // デバッグログ出力 / Debug log output
   logger.debug('Checking email confirmation reminder', {
     today,
     snoozedAt,
   })
 
-  // never been snoozed, new account
+  // スヌーズされたことがない場合（新規アカウント）、リマインダーを表示
+  // If never been snoozed (new account), show reminder
   if (!snoozedAt) {
     return true
   }
 
-  // already snoozed today
+  // 既に今日スヌーズ済みの場合、リマインダーを表示しない
+  // If already snoozed today, don't show reminder
   if (simpleAreDatesEqual(new Date(Date.parse(snoozedAt)), new Date())) {
     return false
   }
 
+  // スヌーズ期限が過ぎた場合、リマインダーを表示
+  // If snooze period has expired, show reminder
   return true
 }
 
+/**
+ * メール確認プロンプトをスヌーズする関数
+ * 現在の日時をスヌーズ時刻として永続化ストレージに保存
+ *
+ * Function to snooze email confirmation prompt
+ * Saves current date/time as snooze time to persistent storage
+ */
 export function snoozeEmailConfirmationPrompt() {
+  // 現在の日時をISO形式で取得 / Get current date/time in ISO format
   const lastEmailConfirm = new Date().toISOString()
+  // デバッグログ出力 / Debug log output
   logger.debug('Snoozing email confirmation reminder', {
     snoozedAt: lastEmailConfirm,
   })
+  // スヌーズ時刻を永続化ストレージに保存 / Save snooze time to persistent storage
   persisted.write('reminders', {
     ...persisted.get('reminders'),
     lastEmailConfirm,

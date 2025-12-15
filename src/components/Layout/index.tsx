@@ -1,19 +1,79 @@
-// Reactのコアフックとユーティリティ - コンポーネント最適化とコンテキスト管理
+/**
+ * @file レイアウトコンポーネント
+ * @description アプリケーション全体のレイアウトシステムを提供するコンポーネント群
+ *
+ * このファイルには、以下のコンポーネントが含まれます:
+ * - Screen: すべての画面の最外層コンテナ
+ * - Content: デフォルトのスクロール可能なコンテンツエリア
+ * - KeyboardAwareContent: キーボード対応スクロールビュー
+ * - Center: コンテンツを中央揃えするユーティリティ
+ * - WebCenterBorders: Web専用の中央ボーダー
+ *
+ * Goユーザー向け説明:
+ * - React Component: Goの関数に似ていますが、UIを返します
+ * - Props: Goの関数引数に相当し、コンポーネントの動作をカスタマイズします
+ * - Hooks: Reactの特殊な関数で、状態管理や副作用の実行などを行います
+ */
+
+/**
+ * Reactのコアフックとユーティリティ - コンポーネント最適化とコンテキスト管理
+ *
+ * Goユーザー向け説明:
+ * - forwardRef: 親コンポーネントが子コンポーネントのDOM要素にアクセスできるようにします
+ * - memo: propsが変わらない限りコンポーネントを再レンダリングしません（Goのキャッシュに似ています）
+ * - useContext: コンテキストから値を取得します（Goのcontext.Valueに似ています）
+ * - useMemo: 計算結果をメモ化します（Goのsync.Onceに似ています）
+ */
 import {forwardRef, memo, useContext, useMemo} from 'react'
-// React Nativeの基本コンポーネントと型定義
+
+/**
+ * React Nativeの基本コンポーネントと型定義
+ *
+ * Goユーザー向け説明:
+ * - StyleSheet: スタイル定義を最適化するユーティリティ（Goの定数定義に似ています）
+ * - View: HTMLのdivに相当する基本コンテナコンポーネント
+ * - ViewProps: Viewコンポーネントのプロパティ型定義
+ * - ViewStyle: ビューのスタイル型定義
+ * - StyleProp: スタイルプロパティの型定義（配列、オブジェクト、undefinedを受け入れます）
+ */
 import {StyleSheet, View, type ViewProps, type ViewStyle} from 'react-native'
-import {type StyleProp} from 'react-native' // スタイルプロパティ型
-// キーボード対応スクロールビュー - キーボード表示時のレイアウト調整
+import {type StyleProp} from 'react-native'
+
+/**
+ * キーボード対応スクロールビュー - キーボード表示時のレイアウト調整
+ *
+ * Goユーザー向け説明:
+ * - モバイルでキーボードが表示されると、画面の一部が隠れてしまいます
+ * - このコンポーネントは、キーボードが表示されたときに自動的にスクロールして、
+ *   フォーカスされた入力フィールドを見えるようにします
+ */
 import {
   KeyboardAwareScrollView,        // キーボード対応スクロールビューコンポーネント
   type KeyboardAwareScrollViewProps, // そのプロパティ型
 } from 'react-native-keyboard-controller'
-// React Native Reanimated - 高性能アニメーションライブラリ
+
+/**
+ * React Native Reanimated - 高性能アニメーションライブラリ
+ *
+ * Goユーザー向け説明:
+ * - Animated: アニメーション可能なコンポーネント（View, ScrollViewなど）を提供
+ * - useAnimatedProps: プロパティをアニメーション化するフック
+ * - UIスレッドで実行されるため、JavaScriptスレッドをブロックせず滑らかなアニメーションを実現
+ * - 60FPS以上のパフォーマンスを維持できます
+ */
 import Animated, {
   type AnimatedScrollViewProps, // アニメーション対応スクロールビューのプロパティ型
   useAnimatedProps,            // 動的プロパティ管理フック
 } from 'react-native-reanimated'
-// セーフエリア管理 - ノッチやステータスバーなどの安全領域を取得
+
+/**
+ * セーフエリア管理 - ノッチやステータスバーなどの安全領域を取得
+ *
+ * Goユーザー向け説明:
+ * - 現代のスマートフォンには、画面上部にノッチ（切り欠き）やステータスバーがあります
+ * - useSafeAreaInsets: これらの領域を避けるための余白（insets）を取得します
+ * - これにより、コンテンツが画面の見えない部分に配置されるのを防ぎます
+ */
 import {useSafeAreaInsets} from 'react-native-safe-area-context'
 
 // プラットフォーム検出 - Web環境かどうかの判定
@@ -49,13 +109,36 @@ export type ScreenProps = React.ComponentProps<typeof View> & {
 /**
  * Outermost component of every screen
  * すべてのスクリーンの最外層コンポーネント
+ *
+ * Goユーザー向け説明:
+ * - memo: このコンポーネントは最適化されており、propsが変わらない限り再レンダリングされません
+ * - これはGoでキャッシュされた結果を返すのに似ています
+ *
+ * 動作:
+ * 1. セーフエリアの上部余白を取得
+ * 2. Web環境では中央ボーダーを追加
+ * 3. すべての画面に共通のスタイルを適用
+ *
+ * @param style - カスタムスタイル（オプション）
+ * @param noInsetTop - 上部セーフエリアを無視するフラグ（オプション）
+ * @param props - その他のViewプロパティ
  */
 export const Screen = memo(function Screen({
   style,      // カスタムスタイル
   noInsetTop, // 上部セーフエリア無視フラグ
   ...props    // その他のビュープロパティ
 }: ScreenProps) {
+  /**
+   * useSafeAreaInsets: セーフエリアの余白を取得するフック
+   *
+   * Goユーザー向け説明:
+   * - このフックは画面の安全領域（ノッチやステータスバーを避ける領域）の寸法を返します
+   * - top: 上部の余白（ステータスバーやノッチの高さ）
+   * - bottom: 下部の余白（ホームインジケーターの高さ）
+   * - left/right: 横方向の余白（縁が丸い画面用）
+   */
   const {top} = useSafeAreaInsets() // 上部セーフエリアの高さを取得
+
   return (
     <>
       {/* Web環境でのみ中央ボーダーを表示 */}
@@ -82,6 +165,10 @@ export type ContentProps = AnimatedScrollViewProps & {
 /**
  * Default scroll view for simple pages
  * シンプルなページ用のデフォルトスクロールビュー
+ *
+ * Goユーザー向け説明:
+ * - memo: Goでいうキャッシュに似ており、propsが変わらない限り再レンダリングを防ぎます
+ * - forwardRef: 親コンポーネントがこのコンポーネントのDOM要素にアクセスできるようにします
  */
 export const Content = memo(
   forwardRef<Animated.ScrollView, ContentProps>(function Content(
@@ -92,11 +179,20 @@ export const Content = memo(
       ignoreTabletLayoutOffset,   // タブレットオフセット無視フラグ
       ...props                    // その他のスクロールビュープロパティ
     },
-    ref, // 参照オブジェクト
+    ref, // 参照オブジェクト - Goのポインタに似ており、コンポーネントのインスタンスを指します
   ) {
     const t = useTheme()               // 現在のテーマ取得
     const {footerHeight} = useShellLayout() // シェルレイアウトからフッター高さを取得
-    // スクロールインジケータの位置を動的に計算するアニメーションプロパティ
+
+    /**
+     * スクロールインジケータの位置を動的に計算するアニメーションプロパティ
+     *
+     * Goユーザー向け説明:
+     * - useAnimatedProps: React Native Reanimatedのフックで、アニメーション可能なプロパティを定義
+     * - このフックはUIスレッドで実行され、JavaScriptスレッドをブロックせずに滑らかなアニメーションを実現
+     * - footerHeight.get(): Reanimatedの共有値から現在の値を取得
+     * - 戻り値: スクロールバーの位置を動的に調整するプロパティオブジェクト
+     */
     const animatedProps = useAnimatedProps(() => {
       return {
         scrollIndicatorInsets: {
@@ -121,7 +217,8 @@ export const Content = memo(
           scrollViewStyles.contentContainer,            // 共通コンテンツコンテナスタイル
           contentContainerStyle,                        // カスタムコンテンツコンテナスタイル
         ]}
-        {...props}> {/* その他のプロパティを展開 */}
+        // その他のプロパティを展開
+        {...props}>
         {/* Webでは中央揃え、ネイティブではそのまま表示 */}
         {isWeb ? (
           <Center ignoreTabletLayoutOffset={ignoreTabletLayoutOffset}>
@@ -136,11 +233,28 @@ export const Content = memo(
   }),
 )
 
-// スクロールビュー用の共通スタイル定義
+/**
+ * スクロールビュー用の共通スタイル定義
+ *
+ * Goユーザー向け説明:
+ * - StyleSheet.create: スタイルオブジェクトを最適化して作成します
+ * - これはGoの定数定義に似ており、一度作成されたスタイルは再利用されます
+ * - パフォーマンス向上のため、スタイルはコンポーネント外で定義します
+ */
 const scrollViewStyles = StyleSheet.create({
+  /**
+   * スクロールビュー自体のスタイル
+   */
   common: {
     width: '100%', // 全幅を使用
   },
+  /**
+   * スクロールビューの内部コンテンツコンテナのスタイル
+   *
+   * 注意: ScrollViewには2つのスタイルプロパティがあります:
+   * - style: ScrollView自体のスタイル（外側のコンテナ）
+   * - contentContainerStyle: スクロール可能なコンテンツのスタイル（内側のコンテンツ）
+   */
   contentContainer: {
     paddingBottom: 100, // 下部に十分なパディングを設定（スクロール領域確保）
   },
@@ -156,8 +270,20 @@ export type KeyboardAwareContentProps = KeyboardAwareScrollViewProps & {
  * Default scroll view for simple pages.
  * シンプルなページ用のデフォルトスクロールビュー。
  *
+ * キーボードが表示されたときに、フォーカスされた入力フィールドを
+ * 自動的に表示領域内にスクロールします。
+ *
+ * Goユーザー向け説明:
+ * - このコンポーネントは、フォーム入力など、キーボードを使用する画面で使用します
+ * - キーボードが入力フィールドを隠さないように自動調整します
+ *
  * BE SURE TO TEST THIS WHEN USING, it's untested as of writing this comment.
  * 使用時は必ずテストしてください。このコメントを書いた時点では未テストです。
+ *
+ * @param children - スクロールビュー内に表示する子要素
+ * @param style - スクロールビューのスタイル
+ * @param contentContainerStyle - コンテンツコンテナのスタイル
+ * @param props - その他のキーボード対応スクロールビュープロパティ
  */
 export const KeyboardAwareContent = memo(function LayoutKeyboardAwareContent({
   children,              // 子要素
@@ -172,7 +298,12 @@ export const KeyboardAwareContent = memo(function LayoutKeyboardAwareContent({
         scrollViewStyles.contentContainer,             // 共通コンテンツコンテナスタイル
         contentContainerStyle,                          // カスタムコンテンツコンテナスタイル
       ]}
-      keyboardShouldPersistTaps="handled"              // キーボード表示中でもタップを処理
+      /**
+       * keyboardShouldPersistTaps: キーボード表示中のタップ動作を制御
+       * - "handled": タップ可能な要素（ボタンなど）のタップを処理し、それ以外はキーボードを閉じる
+       * - これにより、キーボード表示中でもボタンを押すことができます
+       */
+      keyboardShouldPersistTaps="handled"
       {...props}> {/* その他のプロパティを展開 */}
       {/* Webでは中央揃え、ネイティブではそのまま表示 */}
       {isWeb ? <Center>{children}</Center> : children}
@@ -183,6 +314,9 @@ export const KeyboardAwareContent = memo(function LayoutKeyboardAwareContent({
 /**
  * Utility component to center content within the screen
  * スクリーン内でコンテンツを中央揃えするユーティリティコンポーネント
+ *
+ * Goユーザー向け説明:
+ * - memo: コンポーネントの最適化に使用。propsが変わらない限り再レンダリングしません
  */
 export const Center = memo(function LayoutCenter({
   children,                 // 子要素
@@ -190,10 +324,26 @@ export const Center = memo(function LayoutCenter({
   ignoreTabletLayoutOffset, // タブレットレイアウトオフセット無視フラグ
   ...props                  // その他のビュープロパティ
 }: ViewProps & {ignoreTabletLayoutOffset?: boolean}) {
+  /**
+   * useContext: Reactコンテキストから値を取得するフック
+   *
+   * Goユーザー向け説明:
+   * - Goのcontext.Valueに似ており、コンポーネントツリー全体で共有される値を取得
+   * - プロパティを何層も経由せずに、深い階層のコンポーネントに値を渡せます
+   */
   const {isWithinOffsetView} = useContext(ScrollbarOffsetContext) // スクロールバーオフセットビュー内かどうか
   const {gtMobile} = useBreakpoints()                          // モバイル以上のサイズかどうか
   const {centerColumnOffset} = useLayoutBreakpoints()          // 中央カラムオフセットが有効かどうか
   const {isWithinDialog} = useDialogContext()                  // ダイアログ内かどうか
+
+  /**
+   * useMemo: 計算結果をメモ化（キャッシュ）するフック
+   *
+   * Goユーザー向け説明:
+   * - Goのsync.Onceに似ており、依存配列の値が変わらない限り再計算しません
+   * - 空の依存配列[]は、コンポーネントの初回レンダリング時のみ実行されることを意味します
+   * - この例では、常に同じコンテキストオブジェクトを返すため、子コンポーネントの不要な再レンダリングを防ぎます
+   */
   const ctx = useMemo(() => ({isWithinOffsetView: true}), [])  // オフセットビュー内であることを示すコンテキスト
   return (
     <View
@@ -232,28 +382,48 @@ export const Center = memo(function LayoutCenter({
 /**
  * Only used within `Layout.Screen`, not for reuse
  * `Layout.Screen`内でのみ使用、再利用用ではありません
+ *
+ * Web専用: 中央カラムの左右に縦のボーダーを表示します
+ *
+ * Goユーザー向け説明:
+ * - このコンポーネントは、デスクトップブラウザで見たときに、
+ *   コンテンツエリアの境界を視覚的に示すために使用されます
+ * - モバイルサイズでは表示されません（全幅を使用するため）
+ *
+ * 動作:
+ * 1. モバイルより大きい画面でのみ表示
+ * 2. 画面中央に602pxの幅（コンテンツ600px + ボーダー2px）で配置
+ * 3. 中央カラムオフセットとスクロールバーオフセットを考慮して位置調整
  */
 const WebCenterBorders = memo(function LayoutWebCenterBorders() {
   const t = useTheme()                        // 現在のテーマ取得
   const {gtMobile} = useBreakpoints()          // モバイル以上のサイズかどうか
   const {centerColumnOffset} = useLayoutBreakpoints() // 中央カラムオフセットが有効かどうか
+
   // モバイル以上の場合のみボーダーを表示
   return gtMobile ? (
     <View
       style={[
-        a.fixed,                      // 固定位置
-        a.inset_0,                    // 全面に配置
+        a.fixed,                      // 固定位置（スクロールしても動かない）
+        a.inset_0,                    // 全面に配置（top: 0, right: 0, bottom: 0, left: 0）
         a.border_l,                   // 左ボーダー
         a.border_r,                   // 右ボーダー
-        t.atoms.border_contrast_low,  // 低コントラストボーダー色
+        t.atoms.border_contrast_low,  // 低コントラストボーダー色（目立ちすぎないように）
         // Web用のスタイル設定
         web({
           width: 602,                   // ボーダーの幅（コンテンツ幅600px + ボーダー2px）
-          left: '50%',                  // 左から50%の位置
+          left: '50%',                  // 左から50%の位置（画面の中央）
+          /**
+           * transform: 位置調整の配列
+           *
+           * Goユーザー向け説明:
+           * - transformは要素の位置や回転、拡大縮小などを変更します
+           * - 複数のtransformを配列で指定すると、順番に適用されます
+           */
           transform: [
-            {translateX: '-50%'},       // 中央揃えのための基本オフセット
-            {translateX: centerColumnOffset ? CENTER_COLUMN_OFFSET : 0}, // 中央カラムオフセット
-            ...a.scrollbar_offset.transform, // スクロールバーオフセット
+            {translateX: '-50%'},       // 中央揃えのための基本オフセット（要素自体の幅の50%分左にずらす）
+            {translateX: centerColumnOffset ? CENTER_COLUMN_OFFSET : 0}, // 中央カラムオフセット（タブレット用）
+            ...a.scrollbar_offset.transform, // スクロールバーオフセット（スクロールバー分の調整）
           ],
         }),
       ]}

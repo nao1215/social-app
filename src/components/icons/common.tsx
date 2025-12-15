@@ -53,7 +53,8 @@ export function useCommonSVGProps(props: Props) {
           y1="0"                                  // グラデーション開始Y座標
           x2="100%"                               // グラデーション終了X座標
           y2="0"                                  // グラデーション終了Y座標
-          gradientTransform="rotate(45)">         {/* グラデーションを45度回転 */}
+          // グラデーションを45度回転
+          gradientTransform="rotate(45)">
           {/* グラデーションの色停止点をマッピング */}
           {config.values.map(([stop, fill]) => (
             <Stop key={stop} offset={stop} stopColor={fill} /> // 各色停止点を定義

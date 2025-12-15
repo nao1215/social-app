@@ -1,3 +1,30 @@
+/**
+ * サインアップ状態管理モジュール
+ *
+ * 【概要】
+ * 新規アカウント作成フローの状態管理を担当します。
+ * React の useReducer パターンで複雑なフォーム状態を一元管理し、
+ * 段階的な入力検証とステップ遷移を制御します。
+ *
+ * 【Go言語との対応】
+ * - interface/type: Goのstructに相当
+ * - React.createContext: Goのcontext.Contextに似た仕組みでコンポーネントツリー全体で状態を共有
+ * - React.Dispatch: Goのチャネル送信のような役割でアクションを送信して状態を更新
+ * - enum: Goのconst + iotaに相当する列挙型
+ *
+ * 【主な機能】
+ * - 3ステップフォームの進行管理（INFO → HANDLE → CAPTCHA）
+ * - 入力データのバリデーション
+ * - エラーハンドリングとエラートラッキング
+ * - サービス（PDS）情報の管理
+ * - アカウント作成リクエストの送信
+ *
+ * 【ステップフロー】
+ * 1. INFO: メールアドレス、パスワード、生年月日、招待コード入力
+ * 2. HANDLE: ハンドル名（ユーザーID）の選択
+ * 3. CAPTCHA: デバイス認証と不正防止チェック
+ */
+
 import React, {useCallback} from 'react'
 import {LayoutAnimation} from 'react-native'
 import {
@@ -16,10 +43,32 @@ import {logger} from '#/logger'
 import {useSessionApi} from '#/state/session'
 import {useOnboardingDispatch} from '#/state/shell'
 
+/**
+ * サービス記述情報の型（PDSサーバーの設定情報）
+ *
+ * AT Protocol の Personal Data Server (PDS) が提供する
+ * サービスメタデータを表します。
+ */
 export type ServiceDescription = ComAtprotoServerDescribeServer.OutputSchema
 
-const DEFAULT_DATE = new Date(Date.now() - 60e3 * 60 * 24 * 365 * 20) // default to 20 years ago
+/**
+ * デフォルト生年月日（20年前の現在日時）
+ *
+ * 新規登録時の生年月日選択の初期値として使用します。
+ * 60秒 × 60分 × 24時間 × 365日 × 20年 = 20年前
+ */
+const DEFAULT_DATE = new Date(Date.now() - 60e3 * 60 * 24 * 365 * 20)
 
+/**
+ * サインアップステップの列挙型
+ *
+ * 【Goとの対応】Goの const + iota パターンに相当
+ *
+ * 各ステップの役割:
+ * - INFO (0): 基本情報入力（メール、パスワード、生年月日）
+ * - HANDLE (1): ハンドル名の選択と可用性チェック
+ * - CAPTCHA (2): デバイス認証とスパム対策
+ */
 export enum SignupStep {
   INFO,
   HANDLE,

@@ -1,21 +1,48 @@
+/**
+ * @file 認証設定画面
+ *
+ * Blueskyの認証バッジ表示/非表示を制御する設定画面。
+ * Blueskyの認証システムは他のプラットフォームと異なる仕組みを持つため、
+ * 説明ページへのリンクも提供する。
+ *
+ * Go開発者への補足:
+ * - コンポーネントは関数として定義され、状態管理フックを使用
+ * - 内部コンポーネント（Inner）は外部コンポーネント（Screen）の中で定義されることがある
+ */
+
+// React Nativeのビューコンポーネント
 import {View} from 'react-native'
+// Linguiの国際化マクロ
 import {msg, Trans} from '@lingui/macro'
+// Lingui React統合
 import {useLingui} from '@lingui/react'
 
+// 定数URL（Blueskyのウェブサイトリンク）
 import {urls} from '#/lib/constants'
+// ロガーユーティリティ
 import {logger} from '#/logger'
+// プリファレンスクエリフックと型定義
 import {
   usePreferencesQuery,
   type UsePreferencesQueryResponse,
 } from '#/state/queries/preferences'
+// 認証設定を更新するミューテーションフック
 import {useSetVerificationPrefsMutation} from '#/state/queries/preferences'
+// 設定リストコンポーネント群（名前空間インポート）
 import * as SettingsList from '#/screens/Settings/components/SettingsList'
+// デザインシステムのアトムとガターユーティリティ
 import {atoms as a, useGutters} from '#/alf'
+// 注意書きコンポーネント（ヒント、警告などの表示）
 import {Admonition} from '#/components/Admonition'
+// トグルフォームコンポーネント群
 import * as Toggle from '#/components/forms/Toggle'
+// チェックマーク入り円形アイコン
 import {CircleCheck_Stroke2_Corner0_Rounded as CircleCheck} from '#/components/icons/CircleCheck'
+// レイアウトコンポーネント群（画面、ヘッダー、コンテンツ）
 import * as Layout from '#/components/Layout'
+// インラインリンクテキストコンポーネント
 import {InlineLinkText} from '#/components/Link'
+// ローディングスピナー
 import {Loader} from '#/components/Loader'
 
 export function Screen() {

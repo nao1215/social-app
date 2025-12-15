@@ -1,3 +1,32 @@
+/**
+ * @fileoverview ダイアログ状態管理システム
+ *
+ * このモジュールは、アプリケーション全体でダイアログの状態を管理するための
+ * Reactコンテキストシステムを提供します。
+ *
+ * ## 主な機能
+ * - アクティブなダイアログの追跡と管理
+ * - 全ダイアログの一括クローズ機能
+ * - 完全展開状態のダイアログ数の追跡（iOSステータスバー制御用）
+ * - Web/Nativeプラットフォーム別の実装
+ *
+ * ## Goユーザー向けの説明
+ * - React.createContext: Goのcontext.Contextに似た依存性注入の仕組み
+ *   - アプリケーション全体で共有する値を保持
+ *   - コンポーネントツリーを通じて値を伝播（prop drillingを回避）
+ * - React.useContext: Goのcontext.Value()に相当、コンテキストから値を取得
+ * - React.useState: コンポーネント内の状態変数（値が変更されると再レンダリング）
+ * - React.useRef: 再レンダリングを引き起こさない参照型の値（Goのポインタに近い）
+ * - React.useCallback: 関数のメモ化（依存配列が変わらない限り同じ関数インスタンスを返す）
+ * - React.useMemo: 計算結果のメモ化（依存配列が変わらない限り再計算しない）
+ *
+ * ## アーキテクチャ
+ * このファイルは3つのコンテキストを提供:
+ * 1. DialogContext: アクティブなダイアログの状態を保持
+ * 2. DialogControlContext: ダイアログ制御機能（開閉、全クローズ）を提供
+ * 3. DialogFullyExpandedCountContext: 完全展開ダイアログ数を保持（iOS用）
+ */
+
 // Reactライブラリのインポート - コンポーネントの作成に使用
 import React from 'react'
 
@@ -11,33 +40,56 @@ import {Provider as GlobalDialogsProvider} from '#/components/dialogs/Context'
 import {BottomSheetNativeComponent} from '../../../modules/bottom-sheet'
 
 /**
- * ダイアログコンテキストの型定義
+ * ダイアログコンテキストの型定義（Goのstructに相当）
  * アクティブなダイアログの状態管理を行う
+ *
+ * ## Goユーザー向け
+ * - MutableRefObject: Goのポインタに似た概念、再レンダリングを引き起こさない参照
+ * - Map: Goのmap[string]T に相当する連想配列
+ * - Set: Goのmap[string]struct{} に相当する集合
  */
 interface IDialogContext {
   /**
    * 現在アクティブな `useDialogControl` フックのコレクション
+   * ダイアログIDから制御インターフェースへのマッピング
+   *
    * The currently active `useDialogControl` hooks.
+   *
+   * ## Goユーザー向け
+   * Goで書くと: activeDialogs *map[string]*DialogControlRefProps
    */
   activeDialogs: React.MutableRefObject<
     Map<string, React.MutableRefObject<DialogControlRefProps>>
   >
   /**
    * 現在開いているダイアログのID一覧（`useId`で生成されたIDで参照）
+   * ダイアログの開閉状態を高速に確認するためのSet
+   *
    * The currently open dialogs, referenced by their IDs, generated from
    * `useId`.
+   *
+   * ## Goユーザー向け
+   * Goで書くと: openDialogs *map[string]struct{}
    */
   openDialogs: React.MutableRefObject<Set<string>>
 }
 
 /**
- * ダイアログ制御コンテキストの型定義
+ * ダイアログ制御コンテキストの型定義（Goのstructに相当）
  * ダイアログの開閉制御機能を提供
+ *
+ * ## Goユーザー向け
+ * - React.Dispatch<React.SetStateAction<T>>: Goの関数型 func(T) または func(func(T) T)
+ *   - 値を直接設定: setCount(5)
+ *   - 前の値を使って更新: setCount(prev => prev + 1)
  */
 interface IDialogControlContext {
-  closeAllDialogs(): boolean                                    // 全ダイアログを閉じる関数
-  setDialogIsOpen(id: string, isOpen: boolean): void           // 特定ダイアログの開閉状態を設定
-  setFullyExpandedCount: React.Dispatch<React.SetStateAction<number>> // 完全展開ダイアログ数の更新関数
+  /** 全ダイアログを閉じる関数（閉じたダイアログがあればtrue） */
+  closeAllDialogs(): boolean
+  /** 特定ダイアログの開閉状態を設定する関数 */
+  setDialogIsOpen(id: string, isOpen: boolean): void
+  /** 完全展開ダイアログ数の更新関数（useState のセッター） */
+  setFullyExpandedCount: React.Dispatch<React.SetStateAction<number>>
 }
 
 // ダイアログ状態管理用のReactコンテキスト
@@ -149,7 +201,7 @@ export function Provider({children}: React.PropsWithChildren<{}>) {
   )
 
   return (
-    {/* ダイアログ状態コンテキストプロバイダー */}
+    // ダイアログ状態コンテキストプロバイダー
     <DialogContext.Provider value={context}>
       {/* ダイアログ制御コンテキストプロバイダー */}
       <DialogControlContext.Provider value={controls}>

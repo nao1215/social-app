@@ -1,4 +1,29 @@
+/**
+ * @fileoverview 投稿シャドウキャッシュシステム
+ *
+ * このモジュールは、サーバーから受信した投稿データに対してクライアント側で
+ * 一時的な状態変更を管理する「シャドウ」システムを提供します。
+ *
+ * ## 主な機能
+ * - いいね・リポスト・ブックマークなどのUI上の即座な反映（楽観的更新）
+ * - サーバー反映を待たずにユーザーに素早いフィードバックを提供
+ * - WeakMapによる自動メモリ管理（元データが削除されればシャドウも自動削除）
+ * - EventEmitter経由でのリアクティブな更新通知
+ *
+ * ## Goユーザー向けの説明
+ * - useState: Goにおける構造体フィールドのような状態変数（変更すると再レンダリング）
+ * - useEffect: コンポーネントのライフサイクルに応じて実行される副作用処理
+ *   - 第2引数の依存配列が変更された時、またはマウント/アンマウント時に実行
+ *   - return文でクリーンアップ関数を返すことができる（defer的な役割）
+ * - useMemo: 計算コストの高い処理結果をキャッシュ（依存配列が変更されない限り再計算しない）
+ * - WeakMap: キーがGCされると自動的にエントリも削除されるMap（メモリリーク防止）
+ * - EventEmitter: Node.jsスタイルのイベント駆動アーキテクチャ（Pub/Subパターン）
+ */
+
 // React Hooksのインポート - 状態管理とエフェクト処理
+// useState: コンポーネント内の状態を管理（Goのstructフィールドに相当、変更で再レンダリング）
+// useEffect: 副作用処理（マウント/アンマウント時やデータ変更時に実行）
+// useMemo: 計算結果のメモ化（依存配列が変わらない限り再計算しない）
 import {useEffect, useMemo, useState} from 'react'
 // AT Protocol APIの型定義 - Blueskyの投稿とエンベッド機能
 import {
@@ -9,6 +34,7 @@ import {
 // TanStack React Queryのクライアント型 - キャッシュクライアント
 import {type QueryClient} from '@tanstack/react-query'
 // イベントエミッター - 投稿の変更を通知するために使用
+// Node.jsスタイルのイベント駆動アーキテクチャ（Pub/Subパターン）
 import EventEmitter from 'eventemitter3'
 
 // バッチ更新ユーティリティ - パフォーマンス最適化のための一括更新
@@ -100,6 +126,7 @@ export function usePostShadow(
   }, [post, setShadow])
 
   // 元の投稿データとシャドウデータを統合して返却
+  // useMemo: 依存配列（post, shadow）が変更されない限り再計算をスキップ
   return useMemo(() => {
     if (shadow) {
       // シャドウデータがある場合は統合
@@ -111,57 +138,74 @@ export function usePostShadow(
   }, [post, shadow])
 }
 
+/**
+ * 投稿データとシャドウデータを統合する関数
+ * サーバーデータとクライアント側の一時的な変更（いいね、リポストなど）を
+ * マージして最終的な表示用データを生成する
+ *
+ * @param post 元の投稿データ（サーバーから取得）
+ * @param shadow クライアント側の一時的な変更データ
+ * @returns 統合された投稿データまたは削除トゥームストーン
+ */
 function mergeShadow(
   post: AppBskyFeedDefs.PostView,
   shadow: Partial<PostShadow>,
 ): Shadow<AppBskyFeedDefs.PostView> | typeof POST_TOMBSTONE {
+  // 削除された投稿の場合はトゥームストーンを返す
   if (shadow.isDeleted) {
     return POST_TOMBSTONE
   }
 
+  // いいね数の計算（楽観的更新）
   let likeCount = post.likeCount ?? 0
   if ('likeUri' in shadow) {
-    const wasLiked = !!post.viewer?.like
-    const isLiked = !!shadow.likeUri
+    const wasLiked = !!post.viewer?.like    // 以前いいねしていたか
+    const isLiked = !!shadow.likeUri        // 現在いいねしているか
     if (wasLiked && !isLiked) {
-      likeCount--
+      likeCount--  // いいね解除：カウント減少
     } else if (!wasLiked && isLiked) {
-      likeCount++
+      likeCount++  // いいね追加：カウント増加
     }
-    likeCount = Math.max(0, likeCount)
+    likeCount = Math.max(0, likeCount)  // 負の値を防ぐ
   }
 
+  // ブックマーク数の計算（楽観的更新）
   let bookmarkCount = post.bookmarkCount ?? 0
   if ('bookmarked' in shadow) {
-    const wasBookmarked = !!post.viewer?.bookmarked
-    const isBookmarked = !!shadow.bookmarked
+    const wasBookmarked = !!post.viewer?.bookmarked  // 以前ブックマークしていたか
+    const isBookmarked = !!shadow.bookmarked         // 現在ブックマークしているか
     if (wasBookmarked && !isBookmarked) {
-      bookmarkCount--
+      bookmarkCount--  // ブックマーク解除：カウント減少
     } else if (!wasBookmarked && isBookmarked) {
-      bookmarkCount++
+      bookmarkCount++  // ブックマーク追加：カウント増加
     }
-    bookmarkCount = Math.max(0, bookmarkCount)
+    bookmarkCount = Math.max(0, bookmarkCount)  // 負の値を防ぐ
   }
 
+  // リポスト数の計算（楽観的更新）
   let repostCount = post.repostCount ?? 0
   if ('repostUri' in shadow) {
-    const wasReposted = !!post.viewer?.repost
-    const isReposted = !!shadow.repostUri
+    const wasReposted = !!post.viewer?.repost  // 以前リポストしていたか
+    const isReposted = !!shadow.repostUri      // 現在リポストしているか
     if (wasReposted && !isReposted) {
-      repostCount--
+      repostCount--  // リポスト解除：カウント減少
     } else if (!wasReposted && isReposted) {
-      repostCount++
+      repostCount++  // リポスト追加：カウント増加
     }
-    repostCount = Math.max(0, repostCount)
+    repostCount = Math.max(0, repostCount)  // 負の値を防ぐ
   }
 
+  // リプライ数の計算（楽観的更新）
   let replyCount = post.replyCount ?? 0
   if ('optimisticReplyCount' in shadow) {
+    // 楽観的リプライ数が設定されている場合はそれを使用
     replyCount = shadow.optimisticReplyCount ?? replyCount
   }
 
+  // エンベッドコンテンツの処理
   let embed: typeof post.embed
   if ('embed' in shadow) {
+    // 元データとシャドウデータの両方が同じエンベッドタイプの場合のみ更新
     if (
       (AppBskyEmbedRecord.isView(post.embed) &&
         AppBskyEmbedRecord.isView(shadow.embed)) ||
@@ -172,15 +216,16 @@ function mergeShadow(
     }
   }
 
+  // 統合されたデータを構築してシャドウ型として返す
   return castAsShadow({
-    ...post,
-    embed: embed || post.embed,
-    likeCount: likeCount,
-    repostCount: repostCount,
-    replyCount: replyCount,
-    bookmarkCount: bookmarkCount,
+    ...post,  // 元の投稿データをスプレッド展開
+    embed: embed || post.embed,  // エンベッドデータの上書き
+    likeCount: likeCount,        // 計算されたいいね数
+    repostCount: repostCount,    // 計算されたリポスト数
+    replyCount: replyCount,      // 計算されたリプライ数
+    bookmarkCount: bookmarkCount,// 計算されたブックマーク数
     viewer: {
-      ...(post.viewer || {}),
+      ...(post.viewer || {}),    // 元のビューアーデータをスプレッド展開
       like: 'likeUri' in shadow ? shadow.likeUri : post.viewer?.like,
       repost: 'repostUri' in shadow ? shadow.repostUri : post.viewer?.repost,
       pinned: 'pinned' in shadow ? shadow.pinned : post.viewer?.pinned,
@@ -190,44 +235,88 @@ function mergeShadow(
   })
 }
 
+/**
+ * 投稿のシャドウデータを更新し、関連する全てのキャッシュに反映する関数
+ * いいね、リポスト、ブックマークなどのアクションが実行された際に呼ばれる
+ *
+ * 処理の流れ:
+ * 1. キャッシュ内の該当投稿を全て検索
+ * 2. 各投稿のシャドウデータを更新
+ * 3. イベントを発行して UI を更新
+ *
+ * @param queryClient React Query クライアント（キャッシュアクセス用）
+ * @param uri 投稿のURI（AT Protocol識別子）
+ * @param value 更新するシャドウデータの部分的な値
+ */
 export function updatePostShadow(
   queryClient: QueryClient,
   uri: string,
   value: Partial<PostShadow>,
 ) {
+  // キャッシュ内の該当投稿を全て検索（ジェネレータで列挙）
   const cachedPosts = findPostsInCache(queryClient, uri)
+  // 各投稿のシャドウデータを更新（既存データとマージ）
   for (let post of cachedPosts) {
     shadows.set(post, {...shadows.get(post), ...value})
   }
+  // バッチ更新でパフォーマンスを最適化しながらイベントを発行
+  // これによりUIが更新され、変更が即座に反映される
   batchedUpdates(() => {
     emitter.emit(uri)
   })
 }
 
+/**
+ * React Query キャッシュ内の全ての場所から指定URIの投稿を検索するジェネレータ関数
+ *
+ * ## Goユーザー向けの説明
+ * - ジェネレータ関数（function*）: Goのchannelに似た仕組みで、yieldで値を1つずつ返す
+ * - for...of文: Goのrange的な使い方でイテレータを反復処理
+ * - この関数は複数のクエリキャッシュを横断して同じ投稿の全インスタンスを列挙する
+ *
+ * 投稿は複数の場所にキャッシュされている可能性がある:
+ * - フィード（タイムライン）
+ * - 通知一覧
+ * - スレッド表示
+ * - 検索結果
+ * - 引用投稿一覧
+ * - 探索フィードプレビュー
+ *
+ * @param queryClient React Query クライアント
+ * @param uri 検索対象の投稿URI
+ * @yields キャッシュ内で見つかった投稿データ
+ */
 function* findPostsInCache(
   queryClient: QueryClient,
   uri: string,
 ): Generator<AppBskyFeedDefs.PostView, void> {
+  // フィードキャッシュから投稿を検索
   for (let post of findAllPostsInFeedQueryData(queryClient, uri)) {
     yield post
   }
+  // 通知キャッシュから投稿を検索
   for (let post of findAllPostsInNotifsQueryData(queryClient, uri)) {
     yield post
   }
+  // スレッドキャッシュから投稿を検索
   for (let node of findAllPostsInThreadQueryData(queryClient, uri)) {
     if (node.type === 'post') {
       yield node.post
     }
   }
+  // スレッドV2キャッシュから投稿を検索
   for (let post of findAllPostsInThreadV2QueryData(queryClient, uri)) {
     yield post
   }
+  // 検索結果キャッシュから投稿を検索
   for (let post of findAllPostsInSearchQueryData(queryClient, uri)) {
     yield post
   }
+  // 引用投稿キャッシュから投稿を検索
   for (let post of findAllPostsInQuoteQueryData(queryClient, uri)) {
     yield post
   }
+  // 探索フィードプレビューキャッシュから投稿を検索
   for (let post of findAllPostsInExploreFeedPreviewsQueryData(
     queryClient,
     uri,

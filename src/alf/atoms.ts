@@ -1,91 +1,175 @@
+/**
+ * アトミックスタイル定義ファイル
+ *
+ * このファイルはBlueskyデザインシステム(ALF)のアトミックスタイルを定義します。
+ * Atomic CSSの概念に基づき、単一の目的を持つ小さなスタイルユニットを提供します。
+ *
+ * アトミックCSSとは:
+ * 1つまたは少数のCSSプロパティのみを持つ小さなクラスの集合。
+ * 例: .flex { display: flex; }, .p_sm { padding: 8px; }
+ * これにより、スタイルの再利用性と保守性が大幅に向上します。
+ *
+ * スタイルカテゴリ:
+ * - Positioning: 位置指定（absolute, fixed, sticky等）
+ * - Layout: レイアウト（flex, width, height等）
+ * - Spacing: 余白（margin, padding, gap）
+ * - Typography: テキスト（フォントサイズ、太さ、行間等）
+ * - Borders: ボーダー（幅、色、角丸等）
+ * - Colors: 色（背景色、テキスト色、ボーダー色）※テーマ別はthemes.tsで定義
+ * - Effects: 効果（シャドウ、トランジション、アニメーション）
+ * - Interactive: インタラクティブ（ポインタイベント、カーソル等）
+ *
+ * プラットフォーム対応:
+ * - web(): Web専用スタイル
+ * - native(): iOS/Android専用スタイル
+ * - ios(): iOS専用スタイル
+ * - platform(): プラットフォーム別に異なるスタイル
+ *
+ * Go開発者向け補足:
+ * - atomsオブジェクトは、Goの定数マップのようなもの
+ * - 各キーは再利用可能なスタイルユニットを表す
+ * - TailwindCSSやBootstrapのユーティリティクラスに似た概念
+ * - コンポーネントで `style={[atoms.flex, atoms.p_md]}` のように配列で組み合わせる
+ * - StyleSheet.hairlineWidthは、デバイスの最小可視線幅（通常1px未満）
+ */
+
+// React Native基本スタイル型とユーティリティ
 import {
-  Platform,
-  type StyleProp,
-  StyleSheet,
-  type ViewStyle,
+  Platform,               // プラットフォーム判定（iOS/Android/Web）
+  type StyleProp,         // スタイルプロパティ型
+  StyleSheet,             // スタイルシート作成とヘアライン幅
+  type ViewStyle,         // ビュースタイル型
 } from 'react-native'
 
+// デザイントークン（定数値: 色、サイズ、余白等）
 import * as tokens from '#/alf/tokens'
+// プラットフォーム固有スタイル適用ヘルパー
 import {ios, native, platform, web} from '#/alf/util/platform'
+// レイアウト定数（スクロールバーオフセット等）
 import * as Layout from '#/components/Layout'
 
+/**
+ * アトミックスタイル定数オブジェクト
+ *
+ * すべてのアトミックスタイルユニットを含むオブジェクト。
+ * as constにより、TypeScriptで厳密な型推論が可能。
+ *
+ * Go開発者向け:
+ * - これはGoのmap[string]interface{}のようなもの
+ * - 各プロパティは再利用可能なスタイルオブジェクト
+ * - 使用時はスプレッド演算子で展開: {...atoms.flex, ...atoms.p_md}
+ */
 export const atoms = {
+  /**
+   * デバッグ用スタイル
+   * 要素の境界を赤い線で表示し、レイアウトのデバッグに使用
+   * Go開発者向け: fmt.Printlnのようなデバッグツール
+   */
   debug: {
-    borderColor: 'red',
-    borderWidth: 1,
+    borderColor: 'red',   // 赤いボーダー
+    borderWidth: 1,       // 1pxの幅
   },
 
   /*
-   * Positioning
+   * ========================================
+   * Positioning（位置指定）
+   * ========================================
+   * 要素の配置方法を制御するスタイル。
+   * CSS positionプロパティに対応。
+   *
+   * Go開発者向け:
+   * - fixed: Web上で画面に固定（ヘッダー、フッター等）、ネイティブではabsoluteとして扱う
+   * - absolute: 親要素基準の絶対位置（モーダル、オーバーレイ等）
+   * - relative: 通常フロー内で相対的に配置（微調整に使用）
+   * - static: デフォルト配置（top/left等が効かない）
+   * - sticky: スクロールに応じて固定（Web専用、テーブルヘッダー等）
    */
+
+  // 固定配置（Web: 画面固定、Native: 絶対配置）
   fixed: {
     position: Platform.select({web: 'fixed', native: 'absolute'}) as 'absolute',
   },
+  // 絶対配置（親要素基準）
   absolute: {
     position: 'absolute',
   },
+  // 相対配置（通常フロー内で微調整）
   relative: {
     position: 'relative',
   },
+  // 静的配置（デフォルト）
   static: {
     position: 'static',
   },
+  // スティッキー配置（Web専用: スクロールで固定）
   sticky: web({
     position: 'sticky',
   }),
+  // 全方向0配置（top, left, right, bottom全て0: フルスクリーンオーバーレイ等）
   inset_0: {
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
+  // 上端0配置
   top_0: {
     top: 0,
   },
+  // 右端0配置
   right_0: {
     right: 0,
   },
+  // 下端0配置
   bottom_0: {
     bottom: 0,
   },
+  // 左端0配置
   left_0: {
     left: 0,
   },
+
+  // z-index（重なり順）: 大きいほど前面に表示
+  // Go開発者向け: レイヤー構造のようなもの、数値が大きいほど前面
   z_10: {
-    zIndex: 10,
+    zIndex: 10,  // 基本レイヤー
   },
   z_20: {
-    zIndex: 20,
+    zIndex: 20,  // やや前面（ドロップダウン等）
   },
   z_30: {
-    zIndex: 30,
+    zIndex: 30,  // 中間レイヤー（ツールチップ等）
   },
   z_40: {
-    zIndex: 40,
+    zIndex: 40,  // 前面レイヤー（モーダル等）
   },
   z_50: {
-    zIndex: 50,
+    zIndex: 50,  // 最前面（通知、エラー表示等）
   },
 
+  // オーバーフロー制御（要素からはみ出た内容の表示方法）
+  // Go開発者向け: コンテナより大きい内容をどう扱うかの制御
   overflow_visible: {
-    overflow: 'visible',
+    overflow: 'visible',  // はみ出た内容を表示（デフォルト）
   },
   overflow_x_visible: {
-    overflowX: 'visible',
+    overflowX: 'visible',  // 横方向のはみ出しを表示
   },
   overflow_y_visible: {
-    overflowY: 'visible',
+    overflowY: 'visible',  // 縦方向のはみ出しを表示
   },
   overflow_hidden: {
-    overflow: 'hidden',
+    overflow: 'hidden',  // はみ出た内容を隠す（クリッピング）
   },
   overflow_x_hidden: {
-    overflowX: 'hidden',
+    overflowX: 'hidden',  // 横方向のはみ出しを隠す
   },
   overflow_y_hidden: {
-    overflowY: 'hidden',
+    overflowY: 'hidden',  // 縦方向のはみ出しを隠す
   },
   /**
+   * オートスクロール（Web専用）
+   * 内容がはみ出た場合に自動的にスクロールバーを表示
    * @platform web
    */
   overflow_auto: web({
@@ -93,7 +177,15 @@ export const atoms = {
   }),
 
   /*
-   * Width & Height
+   * ========================================
+   * Width & Height（幅と高さ）
+   * ========================================
+   * 要素のサイズを制御するスタイル。
+   *
+   * Go開発者向け:
+   * - full: 100%（親要素いっぱいに拡張）
+   * - vh: viewport height（画面の高さ基準、Web専用）
+   * - これらは親要素やビューポートに対する相対的なサイズ指定
    */
   w_full: {
     width: '100%',

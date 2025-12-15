@@ -506,7 +506,7 @@ async function resolveRecord(
 }
 
 // multiformatsの組み込みハッシュ関数（`multiformats/hashes/sha2`）は
-Node.js用なので、これはクロスプラットフォーム対応版である
+// Node.js用なので、これはクロスプラットフォーム対応版である
 // The built-in hashing functions from multiformats (`multiformats/hashes/sha2`)
 // are meant for Node.js, this is the cross-platform equivalent.
 // クロスプラットフォーム対応のSHA-256ハッシュ関数

@@ -1,74 +1,196 @@
+/**
+ * チャットリスト画面モジュール
+ *
+ * 【概要】
+ * - Blueskyのダイレクトメッセージ（DM）のチャット一覧画面
+ * - 承認済み会話とチャット要求（未承認）の両方を管理
+ * - リアルタイム更新、無限スクロール、プルツーリフレッシュをサポート
+ *
+ * 【主な機能】
+ * - チャット一覧表示（承認済み会話）
+ * - 受信箱プレビュー（未読のチャット要求）
+ * - 新規チャット作成ダイアログ
+ * - 退出済み会話のフィルタリング
+ * - リアルタイムポーリング（10秒間隔）
+ *
+ * 【状態管理】
+ * - TanStack Query: サーバーデータとキャッシング
+ * - ConvoProvider: 会話状態の管理
+ * - EventBus: リアルタイム更新イベント
+ *
+ * 【Go開発者向け補足】
+ * - useState: Goのローカル変数に相当、再レンダリングをトリガー
+ * - useEffect: Goのinit関数やdefer文に類似、コンポーネントライフサイクル管理
+ * - useCallback: メモ化された関数、パフォーマンス最適化用
+ * - useMemo: メモ化された値、計算コストの高い処理の最適化
+ */
+
+// React関連のインポート - フック（Goの関数に相当するが状態を持つ）
 import {useCallback, useEffect, useMemo, useState} from 'react'
+// ネイティブコンポーネント - プラットフォーム固有のUI要素
 import {View} from 'react-native'
+// アニメーション参照 - Reanimatedライブラリのref管理
 import {useAnimatedRef} from 'react-native-reanimated'
+// AT Protocol型定義 - チャット関連のスキーマ定義（Goのstructに相当）
 import {type ChatBskyActorDefs, type ChatBskyConvoDefs} from '@atproto/api'
+// 国際化 - メッセージとトランスコンポーネント
 import {msg, Trans} from '@lingui/macro'
 import {useLingui} from '@lingui/react'
+// ナビゲーションフック - 画面フォーカスとナビゲーション状態
 import {useFocusEffect, useIsFocused} from '@react-navigation/native'
+// ナビゲーション型定義 - 画面プロパティの型安全性
 import {type NativeStackScreenProps} from '@react-navigation/native-stack'
 
+// アプリ状態フック - アクティブ/バックグラウンド状態の取得
 import {useAppState} from '#/lib/hooks/useAppState'
+// 初期レンダリング数フック - パフォーマンス最適化
 import {useInitialNumToRender} from '#/lib/hooks/useInitialNumToRender'
+// メール認証フック - メール認証が必要な操作のガード
 import {useRequireEmailVerification} from '#/lib/hooks/useRequireEmailVerification'
+// ルート型定義 - メッセージタブのナビゲーションパラメータ
 import {type MessagesTabNavigatorParams} from '#/lib/routes/types'
+// エラー処理 - エラーメッセージのクリーンアップ
 import {cleanError} from '#/lib/strings/errors'
+// ロガー - アプリケーションログ出力
 import {logger} from '#/logger'
+// プラットフォーム検出 - iOS/Android判定
 import {isNative} from '#/platform/detection'
+// イベントリスナー - ソフトリセットイベント（タブ再タップ時の処理）
 import {listenSoftReset} from '#/state/events'
+// ポーリング定数 - メッセージ画面の更新間隔（デフォルト10秒）
 import {MESSAGE_SCREEN_POLL_INTERVAL} from '#/state/messages/convo/const'
+// イベントバス - メッセージ関連のイベント処理
 import {useMessagesEventBus} from '#/state/messages/events'
+// 退出会話フック - 退出した会話の追跡
 import {useLeftConvos} from '#/state/queries/messages/leave-conversation'
+// 会話リストクエリ - 会話一覧データの取得
 import {useListConvosQuery} from '#/state/queries/messages/list-conversations'
+// セッションフック - 現在のアカウント情報
 import {useSession} from '#/state/session'
+// リストコンポーネント - 仮想化されたスクロールリスト
 import {List, type ListRef} from '#/view/com/util/List'
+// ローディング表示 - チャットリスト用プレースホルダー
 import {ChatListLoadingPlaceholder} from '#/view/com/util/LoadingPlaceholder'
+// スタイリング - CSSアトム、ブレークポイント、テーマ
 import {atoms as a, useBreakpoints, useTheme} from '#/alf'
+// 年齢制限画面 - 成人向けコンテンツの年齢確認ラッパー
 import {AgeRestrictedScreen} from '#/components/ageAssurance/AgeRestrictedScreen'
+// 年齢確認コピー - 年齢制限関連のテキスト取得
 import {useAgeAssuranceCopy} from '#/components/ageAssurance/useAgeAssuranceCopy'
+// ボタンコンポーネント - 基本ボタン、アイコン、テキスト
 import {Button, ButtonIcon, ButtonText} from '#/components/Button'
+// ダイアログ制御 - ダイアログの開閉管理（Goのチャネルに類似）
 import {type DialogControlProps, useDialogControl} from '#/components/Dialog'
+// 新規チャットダイアログ - 新しい会話を開始するUI
 import {NewChat} from '#/components/dms/dialogs/NewChatDialog'
+// フォーカス時リフレッシュ - 画面フォーカス時の自動更新
 import {useRefreshOnFocus} from '#/components/hooks/useRefreshOnFocus'
+// アイコン - 再試行アイコン
 import {ArrowRotateCounterClockwise_Stroke2_Corner0_Rounded as RetryIcon} from '#/components/icons/ArrowRotateCounterClockwise'
+// アイコン - 情報アイコン
 import {CircleInfo_Stroke2_Corner0_Rounded as CircleInfoIcon} from '#/components/icons/CircleInfo'
+// アイコン - メッセージアイコン
 import {Message_Stroke2_Corner0_Rounded as MessageIcon} from '#/components/icons/Message'
+// アイコン - プラスアイコン
 import {PlusLarge_Stroke2_Corner0_Rounded as PlusIcon} from '#/components/icons/Plus'
+// アイコン - 設定アイコン
 import {SettingsGear2_Stroke2_Corner0_Rounded as SettingsIcon} from '#/components/icons/SettingsGear2'
+// レイアウトコンポーネント - 画面構造とヘッダー
 import * as Layout from '#/components/Layout'
+// リンクコンポーネント - ナビゲーション可能なリンク
 import {Link} from '#/components/Link'
+// リストフッター - 無限スクロール用フッターコンポーネント
 import {ListFooter} from '#/components/Lists'
+// テキストコンポーネント - タイポグラフィ
 import {Text} from '#/components/Typography'
+// チャットリストアイテム - 個別のチャット表示コンポーネント
 import {ChatListItem} from './components/ChatListItem'
+// 受信箱プレビュー - 未読チャット要求のプレビュー
 import {InboxPreview} from './components/InboxPreview'
 
+/**
+ * リストアイテム型定義（Goのtype aliasやstructに相当）
+ *
+ * 【説明】
+ * - TypeScriptのUnion型: 2つの異なる型のいずれかを表現
+ * - Goの interface{} + type switch に類似
+ *
+ * 【アイテム種別】
+ * - INBOX: チャット要求の受信箱プレビュー
+ * - CONVERSATION: 個別のチャット会話
+ */
 type ListItem =
   | {
-      type: 'INBOX'
-      count: number
-      profiles: ChatBskyActorDefs.ProfileViewBasic[]
+      type: 'INBOX' // 受信箱タイプ
+      count: number // 未読チャット要求数
+      profiles: ChatBskyActorDefs.ProfileViewBasic[] // プロフィールプレビュー（最大3件）
     }
   | {
-      type: 'CONVERSATION'
-      conversation: ChatBskyConvoDefs.ConvoView
+      type: 'CONVERSATION' // 会話タイプ
+      conversation: ChatBskyConvoDefs.ConvoView // 会話データ
     }
 
+/**
+ * リストアイテムレンダリング関数
+ *
+ * 【説明】
+ * - FlatList/Listコンポーネントの renderItem プロパティで使用
+ * - アイテムの型に応じて適切なコンポーネントを返す
+ * - Goのtype switchに類似した処理
+ *
+ * @param item - 表示するリストアイテム
+ * @returns JSX要素 - レンダリングされたコンポーネント
+ */
 function renderItem({item}: {item: ListItem}) {
   switch (item.type) {
     case 'INBOX':
+      // 受信箱プレビューコンポーネント
       return <InboxPreview profiles={item.profiles} />
     case 'CONVERSATION':
+      // チャットリストアイテムコンポーネント
       return <ChatListItem convo={item.conversation} />
   }
 }
 
+/**
+ * キー抽出関数
+ *
+ * 【説明】
+ * - React Listの各アイテムに一意のキーを割り当て
+ * - 仮想DOMの差分計算を最適化（GoのmapのキーIDに類似）
+ *
+ * @param item - リストアイテム
+ * @returns 一意のキー文字列
+ */
 function keyExtractor(item: ListItem) {
   return item.type === 'INBOX' ? 'INBOX' : item.conversation.id
 }
 
+/**
+ * プロパティ型定義（Goのstructに相当）
+ * ナビゲーションスタックから渡されるプロパティ
+ */
 type Props = NativeStackScreenProps<MessagesTabNavigatorParams, 'Messages'>
 
+/**
+ * メッセージ画面コンポーネント（外側）
+ *
+ * 【機能】
+ * - 年齢制限チェックを適用したチャット一覧画面
+ * - 成人向けコンテンツとしてチャット機能へのアクセスを制御
+ * - ヘッダーにチャット設定リンクを配置
+ *
+ * 【Go開発者向け補足】
+ * - 関数コンポーネント: Goの関数だがJSXを返す
+ * - Props: 引数として型安全にデータを受け取る
+ *
+ * @param props - ナビゲーションプロパティ
+ * @returns JSX要素 - 年齢制限ラップ済みのメッセージ画面
+ */
 export function MessagesScreen(props: Props) {
+  // 国際化フック - UI文字列の翻訳取得
   const {_} = useLingui()
+  // 年齢確認コピー - 年齢制限関連テキスト
   const aaCopy = useAgeAssuranceCopy()
 
   return (

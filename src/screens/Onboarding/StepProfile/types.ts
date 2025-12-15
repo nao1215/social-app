@@ -1,3 +1,21 @@
+/**
+ * アバター作成機能の型定義モジュール
+ *
+ * 【概要】
+ * オンボーディングのプロフィール設定ステップで使用する
+ * アバタークリエーターの絵文字アイコンと背景色を定義します。
+ *
+ * 【主な機能】
+ * - 利用可能な絵文字アイコンの定義
+ * - アバター背景色のカラーパレット定義
+ * - 絵文字とコンポーネントのマッピング
+ *
+ * 【拡張方法】
+ * 新しいアイコンを追加する場合:
+ * 1. emojiNames 配列にアイコン名を追加
+ * 2. emojiItems レコードにアイコン情報を追加
+ */
+
 import {Alien_Stroke2_Corner0_Rounded as Alien} from '#/components/icons/Alien'
 import {Apple_Stroke2_Corner0_Rounded as Apple} from '#/components/icons/Apple'
 import {At_Stroke2_Corner0_Rounded as At} from '#/components/icons/At'
@@ -18,10 +36,14 @@ import {UFO_Stroke2_Corner0_Rounded as UFO} from '#/components/icons/UFO'
 import {Zap_Stroke2_Corner0_Rounded as Zap} from '#/components/icons/Zap'
 
 /**
- * If you want to add or remove icons from the selection, just add the name to the `emojiNames` array and
- * add the item to the `emojiItems` record..
+ * 利用可能な絵文字アイコン名のリスト
+ *
+ * 【Go言語との対応】Goのconst配列に相当
+ *
+ * アイコンを追加・削除する場合:
+ * 1. この配列にアイコン名を追加/削除
+ * 2. emojiItems レコードに対応する項目を追加/削除
  */
-
 export const emojiNames = [
   'at',
   'arc',
@@ -40,12 +62,27 @@ export const emojiNames = [
   'explosion',
   'lab',
 ] as const
+
+/** 絵文字名の型（emojiNames配列から自動生成） */
 export type EmojiName = (typeof emojiNames)[number]
 
+/**
+ * 絵文字アイコン情報の型定義
+ *
+ * 【Goとの対応】Goのstructに相当
+ */
 export interface Emoji {
+  /** 絵文字の識別名 */
   name: EmojiName
+  /** React コンポーネント（アイコン） */
   component: typeof EmojiArc
 }
+
+/**
+ * 絵文字名からEmojiオブジェクトへのマッピング
+ *
+ * 【Goとの対応】Goのmap[string]Emojiに相当
+ */
 export const emojiItems: Record<EmojiName, Emoji> = {
   at: {
     name: 'at',
@@ -113,6 +150,17 @@ export const emojiItems: Record<EmojiName, Emoji> = {
   },
 }
 
+/**
+ * アバター背景色のカラーパレット
+ *
+ * 【カラー構成】
+ * - #FE8311: オレンジ
+ * - #FED811: イエロー
+ * - #73DF84: グリーン
+ * - #1185FE: ブルー
+ * - #EF75EA: ピンク
+ * - #F55454: レッド
+ */
 export const avatarColors = [
   '#FE8311',
   '#FED811',
@@ -121,4 +169,6 @@ export const avatarColors = [
   '#EF75EA',
   '#F55454',
 ] as const
+
+/** アバター背景色の型（avatarColors配列から自動生成） */
 export type AvatarColor = (typeof avatarColors)[number]

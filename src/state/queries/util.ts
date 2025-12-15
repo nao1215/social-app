@@ -1,3 +1,23 @@
+/**
+ * @fileoverview クエリユーティリティモジュール / Query utilities module
+ *
+ * 【概要】
+ * TanStack Query のクエリ操作に関する共通ユーティリティ関数を提供します。
+ * 無限スクロールデータの管理、URI マッチング、埋め込み投稿の抽出などを行います。
+ *
+ * 【主な機能】
+ * - truncateAndInvalidate: 無限スクロールデータを最初のページに切り詰めて再取得
+ * - didOrHandleUriMatches: DID/ハンドルに関係なくURIマッチング
+ * - getEmbeddedPost: 引用投稿から埋め込み投稿を抽出
+ * - embedViewRecordToPostView: 埋め込みレコードを投稿ビューに変換
+ *
+ * 【Go言語ユーザー向け補足】
+ * - async/await: Goのgoroutineとchannelに相当する非同期処理（Promiseベース）
+ * - Generator関数: Goのchannelやイテレータに相当する遅延評価機能
+ * - QueryClient: データキャッシュ管理のための中心的なクライアント（Goのsync.Mapに相当）
+ * - QueryKey: キャッシュキーの型安全な配列（Goの[]interface{}に相当）
+ */
+
 // AT Protocol API型定義 / AT Protocol API type definitions
 import {
   AppBskyActorDefs, // アクター定義型 / Actor definition types
@@ -60,9 +80,22 @@ export function didOrHandleUriMatches(
   return atUri.host === record.author.handle && record.uri.endsWith(atUri.rkey)
 }
 
+/**
+ * 埋め込まれた投稿を取得する関数 / Function to get embedded post
+ * 引用リツイートやリプライ内の埋め込み投稿を抽出する / Extracts embedded posts from quote reposts or replies
+ *
+ * 【Go言語ユーザー向け補足】
+ * - unknown型: Goのinterface{}に相当する型なしオブジェクト
+ * - ?: Optional型を示す記号（Goのポインタ型やnil許容に相当）
+ * - 型ガードによる安全な型変換を実施
+ *
+ * @param v 埋め込みデータ（型不明） / Embed data (unknown type)
+ * @returns 埋め込み投稿レコード、または undefined / Embedded post record, or undefined
+ */
 export function getEmbeddedPost(
   v: unknown,
 ): AppBskyEmbedRecord.ViewRecord | undefined {
+  // 単純な埋め込みレコードの場合 / Case of simple embed record
   if (
     bsky.dangerousIsType<AppBskyEmbedRecord.View>(v, AppBskyEmbedRecord.isView)
   ) {
@@ -73,6 +106,7 @@ export function getEmbeddedPost(
       return v.record
     }
   }
+  // メディア付き埋め込みレコードの場合 / Case of embed record with media
   if (
     bsky.dangerousIsType<AppBskyEmbedRecordWithMedia.View>(
       v,
@@ -88,20 +122,31 @@ export function getEmbeddedPost(
   }
 }
 
+/**
+ * 埋め込みビューレコードを投稿ビューに変換する関数 / Function to convert embed view record to post view
+ * 引用投稿の埋め込みデータを通常の投稿表示形式に変換 / Converts quote post embed data to normal post display format
+ *
+ * 【Go言語ユーザー向け補足】
+ * - オブジェクトリテラル: Goの構造体リテラルに相当
+ * - ?.[0]: Optional chaining演算子（安全なプロパティアクセス、Goのnilチェックに相当）
+ *
+ * @param v 埋め込みビューレコード / Embed view record
+ * @returns 投稿ビューオブジェクト / Post view object
+ */
 export function embedViewRecordToPostView(
   v: AppBskyEmbedRecord.ViewRecord,
 ): AppBskyFeedDefs.PostView {
   return {
-    uri: v.uri,
-    cid: v.cid,
-    author: v.author,
-    record: v.value,
-    indexedAt: v.indexedAt,
-    labels: v.labels,
-    embed: v.embeds?.[0],
-    likeCount: v.likeCount,
-    quoteCount: v.quoteCount,
-    replyCount: v.replyCount,
-    repostCount: v.repostCount,
+    uri: v.uri, // 投稿URI / Post URI
+    cid: v.cid, // コンテンツID / Content ID
+    author: v.author, // 作成者情報 / Author information
+    record: v.value, // 投稿レコード / Post record
+    indexedAt: v.indexedAt, // インデックス日時 / Indexed timestamp
+    labels: v.labels, // ラベル情報 / Label information
+    embed: v.embeds?.[0], // 埋め込みデータ（最初の要素） / Embed data (first element)
+    likeCount: v.likeCount, // いいね数 / Like count
+    quoteCount: v.quoteCount, // 引用数 / Quote count
+    replyCount: v.replyCount, // 返信数 / Reply count
+    repostCount: v.repostCount, // リポスト数 / Repost count
   }
 }

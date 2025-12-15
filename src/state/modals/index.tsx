@@ -156,7 +156,7 @@ export function Provider({children}: React.PropsWithChildren<{}>) {
   )
 
   return (
-    {/* モーダル状態を子コンポーネントに提供 */}
+    // モーダル状態を子コンポーネントに提供
     <ModalContext.Provider value={state}>
       {/* モーダル操作メソッドを子コンポーネントに提供 */}
       <ModalControlContext.Provider value={methods}>

@@ -1,50 +1,119 @@
+/**
+ * フィード操作モジュール
+ *
+ * 【概要】
+ * Blueskyのフィード（タイムライン）を操作・フィルタリングするためのユーティリティクラス群。
+ * 投稿のスレッド構造解析、重複排除、フィルタリング、言語フィルタリングなどを実行する。
+ *
+ * 【主要機能】
+ * - FeedViewPostsSlice: 単一のフィード項目（投稿+返信コンテキスト）を表現
+ * - FeedTuner: フィードの調整・フィルタリングを実行するエンジン
+ *
+ * 【Goユーザー向け補足】
+ * - classはGoのstructに相当し、メソッドを持つことができる
+ * - 型定義（type）はGoのtype aliasに相当
+ * - Setはmap[string]struct{}に相当する重複排除用のデータ構造
+ */
+
+// AT Protocol API型定義（Goのstructに相当する型システム）
 import {
-  type AppBskyActorDefs,
-  AppBskyEmbedRecord,
-  AppBskyEmbedRecordWithMedia,
-  AppBskyFeedDefs,
-  AppBskyFeedPost,
+  type AppBskyActorDefs, // プロフィール情報の型
+  AppBskyEmbedRecord, // レコード埋め込みの型
+  AppBskyEmbedRecordWithMedia, // メディア付きレコード埋め込みの型
+  AppBskyFeedDefs, // フィード関連の型定義
+  AppBskyFeedPost, // 投稿レコードの型
 } from '@atproto/api'
 
+// Bluesky型バリデーション（実行時の型チェック）
 import * as bsky from '#/types/bsky'
+// 言語判定ヘルパー関数
 import {isPostInLanguage} from '../../locale/helpers'
+// フォールバックマーカー（フィードの途切れを示す特殊投稿）
 import {FALLBACK_MARKER_POST} from './feed/home'
+// フィードソース理由型（カスタムフィードからの投稿を示す）
 import {type ReasonFeedSource} from './feed/types'
 
+// フィード投稿ビューの型エイリアス（Goのtype定義に相当）
 type FeedViewPost = AppBskyFeedDefs.FeedViewPost
 
+/**
+ * フィードチューナー関数型
+ *
+ * フィード内容を加工・フィルタリングする関数の型定義
+ * （Goの関数型に相当: type FeedTunerFn func(tuner *FeedTuner, slices []FeedViewPostsSlice, dryRun bool) []FeedViewPostsSlice）
+ *
+ * @param tuner フィードチューナーインスタンス（状態管理用）
+ * @param slices 処理対象のフィードスライス配列
+ * @param dryRun テスト実行フラグ（trueの場合、状態を変更しない）
+ * @returns フィルタリング済みのスライス配列
+ */
 export type FeedTunerFn = (
   tuner: FeedTuner,
   slices: FeedViewPostsSlice[],
   dryRun: boolean,
 ) => FeedViewPostsSlice[]
 
+/**
+ * フィードスライス項目
+ *
+ * スレッド内の単一投稿を表現する型（Goのstructに相当）
+ */
 type FeedSliceItem = {
-  post: AppBskyFeedDefs.PostView
-  record: AppBskyFeedPost.Record
-  parentAuthor: AppBskyActorDefs.ProfileViewBasic | undefined
-  isParentBlocked: boolean
-  isParentNotFound: boolean
+  post: AppBskyFeedDefs.PostView // 投稿ビュー
+  record: AppBskyFeedPost.Record // 投稿レコード（本文・埋め込みなど）
+  parentAuthor: AppBskyActorDefs.ProfileViewBasic | undefined // 親投稿の著者
+  isParentBlocked: boolean // 親投稿がブロックされているか
+  isParentNotFound: boolean // 親投稿が見つからないか
 }
 
+/**
+ * 著者コンテキスト
+ *
+ * スレッド内の各レベルの著者情報を保持（Goのstructに相当）
+ */
 type AuthorContext = {
-  author: AppBskyActorDefs.ProfileViewBasic
-  parentAuthor: AppBskyActorDefs.ProfileViewBasic | undefined
-  grandparentAuthor: AppBskyActorDefs.ProfileViewBasic | undefined
-  rootAuthor: AppBskyActorDefs.ProfileViewBasic | undefined
+  author: AppBskyActorDefs.ProfileViewBasic // 投稿者
+  parentAuthor: AppBskyActorDefs.ProfileViewBasic | undefined // 親投稿の著者
+  grandparentAuthor: AppBskyActorDefs.ProfileViewBasic | undefined // 祖父投稿の著者
+  rootAuthor: AppBskyActorDefs.ProfileViewBasic | undefined // ルート投稿の著者
 }
 
+/**
+ * フィードビュー投稿スライス
+ *
+ * 【概要】
+ * フィード内の単一項目（投稿+返信コンテキスト）を表現するクラス。
+ * スレッド構造を解析し、ルート・親・子投稿の関係を構築する。
+ *
+ * 【Goユーザー向け補足】
+ * - classはGoのstructにメソッドを追加したもの
+ * - constructorはGoのNewXxx関数に相当（初期化処理）
+ * - プライベートフィールド（_で始まる）は内部実装用
+ *
+ * 【スレッド構造】
+ * - items[0]: ルート投稿（スレッドの最初の投稿）
+ * - items[1]: 親投稿（直接の親）
+ * - items[2]: 現在の投稿
+ */
 export class FeedViewPostsSlice {
-  _reactKey: string
-  _feedPost: FeedViewPost
-  items: FeedSliceItem[]
-  isIncompleteThread: boolean
-  isFallbackMarker: boolean
-  isOrphan: boolean
-  isThreadMuted: boolean
-  rootUri: string
-  feedPostUri: string
+  _reactKey: string // React内部で使用する一意キー
+  _feedPost: FeedViewPost // 元のフィード投稿データ
+  items: FeedSliceItem[] // スレッド内の投稿配列（ルート→親→現在）
+  isIncompleteThread: boolean // スレッドが不完全か（中間投稿が欠けている）
+  isFallbackMarker: boolean // フォールバックマーカーか（フィードの途切れを示す）
+  isOrphan: boolean // 孤立投稿か（親投稿が取得できない）
+  isThreadMuted: boolean // スレッドがミュートされているか
+  rootUri: string // ルート投稿のURI
+  feedPostUri: string // この投稿のURI
 
+  /**
+   * コンストラクタ
+   *
+   * フィード投稿からスライスを構築し、スレッド構造を解析する。
+   * （Goのfunc NewFeedViewPostsSlice(feedPost FeedViewPost) *FeedViewPostsSliceに相当）
+   *
+   * @param feedPost AT ProtocolのFeedViewPost（投稿+返信情報）
+   */
   constructor(feedPost: FeedViewPost) {
     const {post, reply, reason} = feedPost
     this.items = []

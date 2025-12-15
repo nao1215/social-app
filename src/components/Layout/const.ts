@@ -1,21 +1,109 @@
+/**
+ * @file レイアウトシステムの定数定義
+ * @description ヘッダー、ボタン配置、スクロールバーオフセットなどのレイアウト関連の定数を管理
+ *
+ * これらの定数は、アプリ全体で一貫したレイアウトを実現するために使用されます。
+ * 特にWebプラットフォームでは、スクロールバーの表示/非表示によるレイアウトシフトを
+ * 防ぐための計算に使用されます。
+ */
+
+/**
+ * スクロールバーオフセット（負の値）
+ *
+ * CSS変数 `--removed-body-scroll-bar-size` を使用して、
+ * スクロールバーの幅の半分を負の値として計算します。
+ *
+ * 用途:
+ * - スクロールバーが表示されたときに、コンテンツを左に移動してセンタリングを維持
+ * - モーダルやドロワーが開いてbodyのスクロールバーが消えたときの補正
+ *
+ * 例: スクロールバーが15pxの場合、-7.5pxのオフセットが適用される
+ */
 export const SCROLLBAR_OFFSET =
   'calc(-1 * var(--removed-body-scroll-bar-size, 0px) / 2)' as any
+
+/**
+ * スクロールバーオフセット（正の値）
+ *
+ * CSS変数 `--removed-body-scroll-bar-size` を使用して、
+ * スクロールバーの幅の半分を正の値として計算します。
+ *
+ * 用途:
+ * - SCROLLBAR_OFFSETとは逆方向のオフセットが必要な場合
+ * - 右側の要素の配置調整
+ *
+ * 例: スクロールバーが15pxの場合、7.5pxのオフセットが適用される
+ */
 export const SCROLLBAR_OFFSET_POSITIVE =
   'calc(var(--removed-body-scroll-bar-size, 0px) / 2)' as any
 
 /**
- * Useful for visually aligning icons within header buttons with the elements
- * below them on the screen. Apply positively or negatively depending on side
- * of the screen you're on.
+ * ボタンの視覚的な配置調整オフセット（3px）
+ *
+ * ヘッダー内のアイコンボタンと、その下の画面要素を視覚的に揃えるための微調整値です。
+ *
+ * 用途:
+ * - ヘッダーの左右のボタン（戻るボタン、メニューボタンなど）のマージン調整
+ * - ボタンの内部パディングやボーダーを考慮した視覚的な整列
+ *
+ * 適用方法:
+ * - 画面の左側: 負のマージン（-3px）として適用
+ * - 画面の右側: 正のマージン（3px）として適用
+ *
+ * 例:
+ * ```tsx
+ * style={{ marginLeft: -BUTTON_VISUAL_ALIGNMENT_OFFSET }} // 左側のボタン
+ * style={{ marginRight: BUTTON_VISUAL_ALIGNMENT_OFFSET }}  // 右側のボタン
+ * ```
  */
 export const BUTTON_VISUAL_ALIGNMENT_OFFSET = 3
 
 /**
- * Corresponds to the width of a small square or round button
+ * ヘッダースロットサイズ（33px）
+ *
+ * ヘッダーの左右に配置される小さな正方形または円形ボタンの幅に対応します。
+ *
+ * 用途:
+ * - ヘッダーの左スロット（戻るボタン、メニューボタンなど）の幅
+ * - ヘッダーの右スロット（アクションボタン、その他のボタンなど）の幅
+ * - レイアウト計算時の基準値
+ *
+ * この値により、ヘッダーのボタンスロットが統一されたサイズで配置され、
+ * 中央のタイトルエリアが正しく配置されます。
+ *
+ * 例:
+ * ```tsx
+ * <View style={{ width: HEADER_SLOT_SIZE }}>
+ *   <BackButton />
+ * </View>
+ * ```
  */
 export const HEADER_SLOT_SIZE = 33
 
 /**
- * How far to shift the center column when in the tablet breakpoint
+ * 中央カラムオフセット（-105px）
+ *
+ * タブレットブレイクポイント時に、中央カラムをどれだけ左にシフトするかを定義します。
+ *
+ * 用途:
+ * - タブレットサイズのデバイスで、左側のサイドバー（またはドロワー）の存在を考慮した配置
+ * - 3カラムレイアウト時の中央カラムの位置調整
+ *
+ * 動作:
+ * - モバイル: オフセットなし（0px）
+ * - タブレット: 左に105pxシフト（このオフセット値）
+ * - デスクトップ: レイアウトによって異なる可能性がある
+ *
+ * この負の値により、中央カラムが左側のサイドバー領域を考慮して
+ * 適切な位置に配置されます。
+ *
+ * 例:
+ * ```tsx
+ * style={{
+ *   transform: [
+ *     { translateX: centerColumnOffset ? CENTER_COLUMN_OFFSET : 0 }
+ *   ]
+ * }}
+ * ```
  */
 export const CENTER_COLUMN_OFFSET = -105
