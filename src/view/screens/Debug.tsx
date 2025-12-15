@@ -1,40 +1,101 @@
+/**
+ * @file Debug.tsx - デバッグパネル画面
+ * @description 開発時のUIコンポーネント確認・テスト用のデバッグ画面
+ *
+ * ## Goエンジニア向けの説明
+ * - Reactコンポーネント: UIコンポーネントのカタログ/スタイルガイド
+ * - ステートフル: useState で現在のタブとテーマを管理
+ * - テーマプロバイダー: 子コンポーネントにテーマを注入（Goのcontext.Contextに類似）
+ * - ViewSelector: スワイプ可能なタブUI（BaseタブでSwipeを切り替え）
+ *
+ * ## 主な機能
+ * - UIコンポーネントのプレビュー（タイポグラフィ、ボタン、パレット等）
+ * - ダークモード切り替えテスト
+ * - エラー表示のプレビュー
+ * - トースト通知のテスト
+ * - ローディングプレースホルダーの確認
+ *
+ * ## アーキテクチャ
+ * - 4つのタブ: Base（基本UI）、Controls（操作UI）、Error（エラー）、Notifs（通知）
+ * - ThemeProvider でテーマを切り替え可能
+ * - デバッグ専用画面（本番では使用しない）
+ *
+ * ## レガシー情報
+ * - ViewHeader, ViewSelector: 旧コンポーネント（デバッグ用途なので移行せず維持）
+ *
+ * @module view/screens/Debug
+ */
+
+// Reactコアライブラリ
 import React from 'react'
+// React Native基本コンポーネント
 import {ScrollView, View} from 'react-native'
+// 国際化ライブラリ（翻訳）
 import {msg} from '@lingui/macro'
 import {useLingui} from '@lingui/react'
 
+// テーマカラー取得フック
 import {usePalette} from '#/lib/hooks/usePalette'
+// ナビゲーション型定義
 import {
   type CommonNavigatorParams,
   type NativeStackScreenProps,
 } from '#/lib/routes/types'
+// 共通スタイル
 import {s} from '#/lib/styles'
+// テーマプロバイダー（ライト/ダークテーマ切り替え）
 import {type PaletteColorName, ThemeProvider} from '#/lib/ThemeContext'
+// 空状態表示コンポーネント
 import {EmptyState} from '#/view/com/util/EmptyState'
+// エラーメッセージコンポーネント
 import {ErrorMessage} from '#/view/com/util/error/ErrorMessage'
+// エラー画面コンポーネント
 import {ErrorScreen} from '#/view/com/util/error/ErrorScreen'
+// ボタンコンポーネント
 import {Button} from '#/view/com/util/forms/Button'
+// トグルボタンコンポーネント
 import {ToggleButton} from '#/view/com/util/forms/ToggleButton'
+// ローディングプレースホルダーコンポーネント群
 import * as LoadingPlaceholder from '#/view/com/util/LoadingPlaceholder'
+// テキストコンポーネント
 import {Text} from '#/view/com/util/text/Text'
+// トースト通知
 import * as Toast from '#/view/com/util/Toast'
+// ビューヘッダー（レガシー）
 import {ViewHeader} from '#/view/com/util/ViewHeader'
+// ビューセレクター（タブ切り替え、レガシー）
 import {ViewSelector} from '#/view/com/util/ViewSelector'
+// レイアウトコンポーネント
 import * as Layout from '#/components/Layout'
 
+// メインタブの定義（Base, Controls, Error, Notifs）
 const MAIN_VIEWS = ['Base', 'Controls', 'Error', 'Notifs']
 
+/**
+ * DebugScreen - デバッグ画面のエントリーポイント
+ *
+ * Goでの例:
+ * func DebugHandler(w http.ResponseWriter, r *http.Request) {
+ *   theme := r.URL.Query().Get("theme")
+ *   render(w, "debug.html", theme)
+ * }
+ *
+ * テーマプロバイダーでラップし、ダークモード切り替えを実現
+ */
 export const DebugScreen = ({}: NativeStackScreenProps<
   CommonNavigatorParams,
   'Debug'
 >) => {
+  // カラースキーム状態管理（light/dark）
   const [colorScheme, setColorScheme] = React.useState<'light' | 'dark'>(
     'light',
   )
+  // テーマ切り替えハンドラー
   const onToggleColorScheme = () => {
     setColorScheme(colorScheme === 'light' ? 'dark' : 'light')
   }
   return (
+    // ThemeProvider: 子コンポーネントにテーマを注入（Goのcontext.Contextに類似）
     <ThemeProvider theme={colorScheme}>
       <Layout.Screen>
         <DebugInner
@@ -46,6 +107,11 @@ export const DebugScreen = ({}: NativeStackScreenProps<
   )
 }
 
+/**
+ * DebugInner - デバッグパネルのメインコンポーネント
+ *
+ * ViewSelectorを使用して4つのタブ（Base, Controls, Error, Notifs）を切り替え
+ */
 function DebugInner({
   colorScheme,
   onToggleColorScheme,
@@ -53,13 +119,20 @@ function DebugInner({
   colorScheme: 'light' | 'dark'
   onToggleColorScheme: () => void
 }) {
+  // 現在のタブインデックス（0=Base, 1=Controls, 2=Error, 3=Notifs）
   const [currentView, setCurrentView] = React.useState<number>(0)
-  const pal = usePalette('default')
-  const {_} = useLingui()
+  const pal = usePalette('default') // テーマカラー（レガシー）
+  const {_} = useLingui() // 国際化
 
+  /**
+   * renderItem - ViewSelectorのレンダー関数
+   *
+   * 各タブの内容を条件分岐で切り替え
+   */
   const renderItem = (item: any) => {
     return (
       <View key={`view-${item.currentView}`}>
+        {/* ダークモード切り替えトグル（全タブ共通） */}
         <View style={[s.pt10, s.pl10, s.pr10]}>
           <ToggleButton
             type="default-light"
@@ -68,6 +141,7 @@ function DebugInner({
             label={_(msg`Dark mode`)}
           />
         </View>
+        {/* タブコンテンツの条件分岐 */}
         {item.currentView === 3 ? (
           <NotifsView />
         ) : item.currentView === 2 ? (
@@ -81,11 +155,13 @@ function DebugInner({
     )
   }
 
+  // ViewSelectorに渡すアイテム（現在のタブインデックスを含む）
   const items = [{currentView}]
 
   return (
     <View style={[s.hContentRegion, pal.view]}>
       <ViewHeader title={_(msg`Debug panel`)} />
+      {/* スワイプ可能なタブセレクター */}
       <ViewSelector
         swipeEnabled
         sections={MAIN_VIEWS}
@@ -97,6 +173,11 @@ function DebugInner({
   )
 }
 
+/**
+ * Heading - セクション見出しコンポーネント
+ *
+ * 各UIセクションのタイトルを表示
+ */
 function Heading({label}: {label: string}) {
   const pal = usePalette('default')
   return (
@@ -108,6 +189,11 @@ function Heading({label}: {label: string}) {
   )
 }
 
+/**
+ * BaseView - 基本UIコンポーネントのプレビュータブ
+ *
+ * タイポグラフィ、カラーパレット、空状態、ローディングプレースホルダーを表示
+ */
 function BaseView() {
   return (
     <View style={[s.pl10, s.pr10]}>
@@ -128,6 +214,11 @@ function BaseView() {
   )
 }
 
+/**
+ * ControlsView - コントロールUIのプレビュータブ
+ *
+ * ボタン、トグルボタンなどのインタラクティブUI要素を表示
+ */
 function ControlsView() {
   return (
     <ScrollView style={[s.pl10, s.pr10]}>
@@ -140,9 +231,15 @@ function ControlsView() {
   )
 }
 
+/**
+ * ErrorView - エラー表示のプレビュータブ
+ *
+ * 全画面エラー、インラインエラーメッセージの各バリエーションを表示
+ */
 function ErrorView() {
   return (
     <View style={s.p10}>
+      {/* 全画面エラー */}
       <View style={s.mb5}>
         <ErrorScreen
           title="Error screen"
@@ -151,21 +248,25 @@ function ErrorView() {
           onPressTryAgain={() => {}}
         />
       </View>
+      {/* 基本エラーメッセージ */}
       <View style={s.mb5}>
         <ErrorMessage message="This is an error that occurred while things were being done" />
       </View>
+      {/* 1行省略エラーメッセージ */}
       <View style={s.mb5}>
         <ErrorMessage
           message="This is an error that occurred while things were being done"
           numberOfLines={1}
         />
       </View>
+      {/* リトライボタン付きエラーメッセージ */}
       <View style={s.mb5}>
         <ErrorMessage
           message="This is an error that occurred while things were being done"
           onPressTryAgain={() => {}}
         />
       </View>
+      {/* リトライボタン付き1行省略エラーメッセージ */}
       <View style={s.mb5}>
         <ErrorMessage
           message="This is an error that occurred while things were being done"
@@ -177,14 +278,21 @@ function ErrorView() {
   )
 }
 
+/**
+ * NotifsView - 通知のテストタブ
+ *
+ * プッシュ通知とトースト通知のトリガーボタンを提供
+ */
 function NotifsView() {
   const triggerPush = () => {
-    // TODO: implement local notification for testing
+    // TODO: ローカル通知のテスト実装（未実装）
   }
   const triggerToast = () => {
+    // 短いトーストメッセージ
     Toast.show('The task has been completed')
   }
   const triggerToast2 = () => {
+    // 長いトーストメッセージ
     Toast.show('The task has been completed successfully and with no problems')
   }
   return (

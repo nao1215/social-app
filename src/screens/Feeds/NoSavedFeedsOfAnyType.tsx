@@ -100,13 +100,14 @@ export function NoSavedFeedsOfAnyType() {
       </Text>
 
       {/* 推奨フィード適用ボタン */}
+      {/* 処理中は無効化（二重送信防止）、プライマリカラー、ソリッドスタイル */}
       <Button
-        disabled={isPending} // 処理中は無効化（二重送信防止）
-        label={_(msg`Apply default recommended feeds`)} // アクセシビリティラベル
-        size="small" // ボタンサイズ
-        variant="solid" // ソリッドスタイル（塗りつぶし）
-        color="primary" // プライマリカラー
-        onPress={addRecommendedFeeds}> {/* クリック時のハンドラ */}
+        disabled={isPending}
+        label={_(msg`Apply default recommended feeds`)}
+        size="small"
+        variant="solid"
+        color="primary"
+        onPress={addRecommendedFeeds}>
         {/* 左側にプラスアイコンを配置 */}
         <ButtonIcon icon={Plus} position="left" />
         {/* ボタンのテキスト */}

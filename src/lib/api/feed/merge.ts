@@ -1,30 +1,136 @@
+/**
+ * マージフィードAPIモジュール
+ *
+ * 【概要】
+ * 複数のフィードソース（フォロー中 + カスタムフィード）を
+ * 統合して1つのフィードとして表示するためのAPIクラス群。
+ *
+ * 【主な機能】
+ * - フォロー中フィードとカスタムフィードの統合
+ * - 複数フィードのサンプリングとインターリーブ（織り交ぜ）
+ * - フィードのプリフェッチとキューイング
+ *
+ * 【アルゴリズム】
+ * 1. フォロー中フィードを常に優先
+ * 2. 一定間隔（4件目、5件目等）でカスタムフィードを織り交ぜる
+ * 3. フォロー中の投稿が尽きたらカスタムフィードのみ表示
+ *
+ * 【Goユーザー向け補足】
+ * - classはGoのstructにメソッドを追加したもの
+ * - shuffleはfisher-yatesシャッフルアルゴリズム
+ * - Promise.all()は複数goroutineの完了待ち（sync.WaitGroup相当）
+ */
+
+/**
+ * AT Protocol API型定義
+ * AppBskyFeedDefs: フィード関連の型定義
+ * AppBskyFeedGetTimeline: タイムライン取得APIの型
+ * BskyAgent: APIクライアント
+ */
 import {AppBskyFeedDefs, AppBskyFeedGetTimeline, BskyAgent} from '@atproto/api'
+
+/**
+ * lodash.shuffle: 配列をランダムシャッフルする関数
+ * フィードソースの順序をランダム化して偏りを防ぐ
+ */
 import shuffle from 'lodash.shuffle'
 
+/**
+ * bundleAsync: 複数の同時呼び出しを1つにまとめるユーティリティ
+ * 同じ処理が複数回呼ばれても1回だけ実行される
+ */
 import {bundleAsync} from '#/lib/async/bundle'
+
+/**
+ * timeout: タイムアウト付きPromiseを作成
+ * 遅いフィードジェネレータに足を引っ張られないようにする
+ */
 import {timeout} from '#/lib/async/timeout'
+
+/**
+ * feedUriToHref: フィードURIをURL形式に変換
+ * at://... → https://bsky.app/profile/.../feed/...
+ */
 import {feedUriToHref} from '#/lib/strings/url-helpers'
+
+/**
+ * getContentLanguages: ユーザーのコンテンツ言語設定を取得
+ */
 import {getContentLanguages} from '#/state/preferences/languages'
+
+/**
+ * FeedParams: フィード取得パラメータの型
+ */
 import {FeedParams} from '#/state/queries/post-feed'
+
+/**
+ * FeedTuner, FeedTunerFn: フィードフィルタリング・調整ユーティリティ
+ */
 import {FeedTuner} from '../feed-manip'
 import {FeedTunerFn} from '../feed-manip'
+
+/**
+ * フィードAPI関連型
+ */
 import {FeedAPI, FeedAPIResponse, ReasonFeedSource} from './types'
+
+/**
+ * Bluesky公式フィード判定・ヘッダー生成ユーティリティ
+ */
 import {createBskyTopicsHeader, isBlueskyOwnedFeed} from './utils'
 
+/**
+ * リクエスト待機時間（ミリ秒）
+ * 遅いフィードジェネレータを待つ最大時間
+ */
 const REQUEST_WAIT_MS = 500 // 500ms
+
+/**
+ * 投稿の鮮度カットオフ（ミリ秒）
+ * この時間より古い投稿はカスタムフィードから除外
+ * 60e3 = 60000ms = 1分、× 60 × 24 = 24時間
+ */
 const POST_AGE_CUTOFF = 60e3 * 60 * 24 // 24hours
 
+/**
+ * マージフィードAPIクラス
+ *
+ * 【概要】
+ * 複数のフィードソースを統合するメインクラス。
+ * FeedAPIインターフェースを実装（Goのinterface実装に相当）。
+ *
+ * 【アーキテクチャ】
+ * - following: フォロー中フィードソース（優先度高）
+ * - customFeeds: カスタムフィードソース配列（ランダム順）
+ *
+ * 【サンプリングロジック】
+ * - 最初の15件はフォロー中のみ
+ * - その後は4件目、5件目ごとにカスタムフィードをインターリーブ
+ * - フォロー中が尽きたらカスタムフィードのみ
+ *
+ * 【Goユーザー向け補足】
+ * - implements FeedAPIはGoのinterface実装に相当
+ * - 複数のカーソルで状態を管理（feedCursor, itemCursor, sampleCursor）
+ */
 export class MergeFeedAPI implements FeedAPI {
-  userInterests?: string
-  agent: BskyAgent
-  params: FeedParams
-  feedTuners: FeedTunerFn[]
-  following: MergeFeedSource_Following
-  customFeeds: MergeFeedSource_Custom[] = []
-  feedCursor = 0
-  itemCursor = 0
-  sampleCursor = 0
+  userInterests?: string           // ユーザーの興味（パーソナライズ用）
+  agent: BskyAgent                 // APIクライアント
+  params: FeedParams               // フィードパラメータ
+  feedTuners: FeedTunerFn[]        // フィードフィルタリング関数群
+  following: MergeFeedSource_Following  // フォロー中フィードソース
+  customFeeds: MergeFeedSource_Custom[] = []  // カスタムフィードソース配列
+  feedCursor = 0                   // 次に使用するカスタムフィードのインデックス
+  itemCursor = 0                   // 出力済みアイテム数（サンプリング間隔計算用）
+  sampleCursor = 0                 // カスタムフィードサンプリング用インデックス
 
+  /**
+   * コンストラクタ
+   *
+   * @param agent APIクライアント
+   * @param feedParams フィードパラメータ（mergeFeedSources等）
+   * @param feedTuners フィードフィルタリング関数群
+   * @param userInterests ユーザーの興味（オプション）
+   */
   constructor({
     agent,
     feedParams,
@@ -40,6 +146,7 @@ export class MergeFeedAPI implements FeedAPI {
     this.params = feedParams
     this.feedTuners = feedTuners
     this.userInterests = userInterests
+    // フォロー中フィードソースを初期化
     this.following = new MergeFeedSource_Following({
       agent: this.agent,
       feedTuners: this.feedTuners,

@@ -237,14 +237,18 @@ export function BackButton({onPress, style, ...props}: Partial<ButtonProps>) {
         color="secondary"               // セカンダリーカラー
         shape="square"                  // 正方形
         onPress={onPressBack}           // プレスハンドラ
-        hitSlop={HITSLOP_30}            // タップ領域を30px拡張
+        // タップ領域を30px拡張
+        hitSlop={HITSLOP_30}
         style={[
           // 視覚的な配置調整のため左マージンを負の値に
           {marginLeft: -BUTTON_VISUAL_ALIGNMENT_OFFSET},
-          a.bg_transparent,             // 背景を透明に
-          style,                        // カスタムスタイル
+          // 背景を透明に
+          a.bg_transparent,
+          // カスタムスタイル
+          style,
         ]}
-        {...props}> {/* その他のプロパティを展開 */}
+        // その他のプロパティを展開
+        {...props}>
         <ButtonIcon icon={ArrowLeft} size="lg" />
       </Button>
     </Slot>

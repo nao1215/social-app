@@ -1,79 +1,161 @@
+/**
+ * @file DebugMod.tsx - モデレーション機能デバッグ画面
+ * @description AT Protocolのモデレーション機能（ラベル、ブロック、ミュート）の
+ * 様々な状態を視覚的にテスト・検証するための開発者向けデバッグツール
+ *
+ * ## Goエンジニア向けの説明
+ * - Reactコンポーネント: Goのhttp.HandlerFunc的な関数で、UIの状態管理と描画を行う
+ * - React.useState: 状態変数（Goのローカル変数に似ているが再描画時に永続化）
+ * - React.useMemo: メモ化（計算結果をキャッシュ、依存配列の値が変わった時のみ再計算）
+ * - Context.Provider: 依存性注入のようなもの（子コンポーネントに値を注入）
+ *
+ * ## 主な機能
+ * - モデレーション状態のインタラクティブシミュレーション（ラベル、ブロック、ミュート）
+ * - 各種モデレーションラベルのプレビュー表示（porn, gore, spam等）
+ * - カスタムラベルの作成・テスト
+ * - モデレーション対象（アカウント、プロフィール、投稿、埋め込み）の切り替え
+ * - 表示パターン（投稿、通知、アカウント、生データ）の検証
+ * - モデレーション設定（hide/warn/ignore）のテスト
+ * - セルフラベル、フォロー状態、ログアウト状態などのエッジケース検証
+ *
+ * ## アーキテクチャ
+ * - モックデータ生成: @atproto/api/mockを使用してテストデータを動的生成
+ * - リアルタイムプレビュー: 設定変更が即座にUI反映（Goのテンプレート再レンダリングに相当）
+ * - コンテキスト上書き: moderationOptsOverrideContextで子コンポーネントの設定を変更
+ * - コンポーネント分離: 各UIパーツは独立したサブコンポーネントとして実装
+ *
+ * ## 技術的詳細
+ * - AT Protocol仕様: ラベルベースのコンテンツモデレーションを実装
+ * - ラベルソース: 自己ラベル（self-label）と外部ラベラー（labeler）の両方をサポート
+ * - モデレーションUI計算: moderateProfile/moderatePostで各種UIフラグを算出
+ * - 状態管理: 13個のReact状態（scenario, label, target, visibility等）で全状態を制御
+ *
+ * @module view/screens/DebugMod
+ */
+
+// React本体とネイティブコンポーネント（Goのhtml/template的な役割）
 import React from 'react'
 import {View} from 'react-native'
+// AT Protocolの型定義とモデレーション関数（APIクライアントライブラリ）
 import {
-  type AppBskyActorDefs,
-  type AppBskyFeedDefs,
-  type AppBskyFeedPost,
-  type ComAtprotoLabelDefs,
-  interpretLabelValueDefinition,
-  type LabelPreference,
-  LABELS,
-  mock,
-  moderatePost,
-  moderateProfile,
-  type ModerationBehavior,
-  type ModerationDecision,
-  type ModerationOpts,
-  RichText,
+  type AppBskyActorDefs, // アクター（ユーザー）関連の型定義
+  type AppBskyFeedDefs, // フィード（投稿リスト）関連の型定義
+  type AppBskyFeedPost, // 投稿の型定義
+  type ComAtprotoLabelDefs, // ラベル定義の型（カスタムラベル作成用）
+  interpretLabelValueDefinition, // ラベル定義を解釈する関数
+  type LabelPreference, // ラベル表示設定の型（hide/warn/ignore）
+  LABELS, // 定義済みラベル一覧（porn, gore, spam等）
+  mock, // モックデータ生成ヘルパー
+  moderatePost, // 投稿のモデレーション判定
+  moderateProfile, // プロフィールのモデレーション判定
+  type ModerationBehavior, // モデレーション動作の型
+  type ModerationDecision, // モデレーション判定結果の型
+  type ModerationOpts, // モデレーション設定オプションの型
+  RichText, // リッチテキスト処理クラス
 } from '@atproto/api'
+// 国際化ライブラリ（Goのi18n的な役割）
 import {msg} from '@lingui/macro'
 import {useLingui} from '@lingui/react'
 
+// グローバルラベルの表示文字列を取得するフック
 import {useGlobalLabelStrings} from '#/lib/moderation/useGlobalLabelStrings'
+// ルーティング関連の型定義（Goのgorilla/mux的な役割）
 import {
   type CommonNavigatorParams,
   type NativeStackScreenProps,
 } from '#/lib/routes/types'
+// モデレーション設定を取得・操作するフック
 import {useModerationOpts} from '#/state/preferences/moderation-opts'
 import {moderationOptsOverrideContext} from '#/state/preferences/moderation-opts'
+// 通知関連の型定義とユーティリティ
 import {type FeedNotification} from '#/state/queries/notifications/types'
 import {
-  groupNotifications,
-  shouldFilterNotif,
+  groupNotifications, // 通知をグループ化
+  shouldFilterNotif, // 通知をフィルタリングすべきか判定
 } from '#/state/queries/notifications/util'
+// スレッド表示用のビューモデル生成
 import {threadPost} from '#/state/queries/usePostThread/views'
+// セッション情報（現在のユーザーアカウント）を取得
 import {useSession} from '#/state/session'
+// レイアウト用の共通コンポーネント
 import {CenteredView, ScrollView} from '#/view/com/util/Views'
+// スレッドアイテム表示コンポーネント（投稿単体とアンカー）
 import {ThreadItemAnchor} from '#/screens/PostThread/components/ThreadItemAnchor'
 import {ThreadItemPost} from '#/screens/PostThread/components/ThreadItemPost'
+// プロフィールヘッダー表示コンポーネント
 import {ProfileHeaderStandard} from '#/screens/Profile/Header/ProfileHeaderStandard'
+// デザインシステム（atoms: スタイルプリミティブ、useTheme: テーマフック）
 import {atoms as a, useTheme} from '#/alf'
+// ボタンコンポーネント群
 import {Button, ButtonIcon, ButtonText} from '#/components/Button'
+// 区切り線コンポーネント
 import {Divider} from '#/components/Divider'
+// トグルボタン/チェックボックスコンポーネント群
 import * as Toggle from '#/components/forms/Toggle'
 import * as ToggleButton from '#/components/forms/ToggleButton'
+// アイコンコンポーネント（チェックマークとシェブロン）
 import {Check_Stroke2_Corner0_Rounded as Check} from '#/components/icons/Check'
 import {
   ChevronBottom_Stroke2_Corner0_Rounded as ChevronBottom,
   ChevronTop_Stroke2_Corner0_Rounded as ChevronTop,
 } from '#/components/icons/Chevron'
+// レイアウトコンポーネント群（画面構造）
 import * as Layout from '#/components/Layout'
+// プロフィールカード表示コンポーネント
 import * as ProfileCard from '#/components/ProfileCard'
+// タイポグラフィコンポーネント群（見出し、本文テキスト）
 import {H1, H3, P, Text} from '#/components/Typography'
+// 画面非表示コンポーネント（モデレーション時の全画面隠蔽）
 import {ScreenHider} from '../../components/moderation/ScreenHider'
+// 通知フィードアイテム表示コンポーネント
 import {NotificationFeedItem} from '../com/notifications/NotificationFeedItem'
+// 投稿フィードアイテム表示コンポーネント
 import {PostFeedItem} from '../com/posts/PostFeedItem'
 
+// LABELS定義からラベル値のキー一覧を抽出（Goのmapのキー取得に相当）
 const LABEL_VALUES: (keyof typeof LABELS)[] = Object.keys(
   LABELS,
 ) as (keyof typeof LABELS)[]
 
+/**
+ * DebugModScreen - モデレーション機能デバッグ画面コンポーネント
+ *
+ * Goエンジニア向け:
+ * - この関数はReact関数コンポーネント（Goのhttp.HandlerFunc的な役割）
+ * - 戻り値はJSX（ReactのHTML風記法、Goのhtml/templateに相当）
+ * - 状態管理はuseStateフックで行う（Goではstructフィールド+再描画が必要な場所）
+ * - 計算コストの高い値はuseMemoでキャッシュ（依存配列変更時のみ再計算）
+ *
+ * 状態管理の構造:
+ * - scenario: 'label' | 'block' | 'mute' のシナリオ選択
+ * - label: 選択されたラベル値（porn, gore, spam等）
+ * - target: モデレーション対象（account/profile/post/embed）
+ * - visibility: ラベルの表示設定（hide/warn/ignore）
+ * - scenarioSwitches: 高度な設定のトグル状態
+ */
 export const DebugModScreen = ({}: NativeStackScreenProps<
   CommonNavigatorParams,
   'DebugMod'
 >) => {
+  // テーマ情報取得（ダークモード/ライトモードの色情報）
   const t = useTheme()
+  // シナリオ選択状態（label/block/mute）- Goのenum的な使い方
   const [scenario, setScenario] = React.useState<string[]>(['label'])
+  // 高度な設定のトグル状態（targetMe, following, selfLabel等）
   const [scenarioSwitches, setScenarioSwitches] = React.useState<string[]>([])
+  // 選択されたラベル（porn, gore, spam等）
   const [label, setLabel] = React.useState<string[]>([LABEL_VALUES[0]])
+  // モデレーション対象（account/profile/post/embed）
   const [target, setTarget] = React.useState<string[]>(['account'])
+  // ラベルの表示設定（hide/warn/ignore）
   const [visibility, setVisiblity] = React.useState<string[]>(['warn'])
+  // カスタムラベル定義の状態（ラベラーが独自ラベルを作成する場合の設定）
   const [customLabelDef, setCustomLabelDef] =
     React.useState<ComAtprotoLabelDefs.LabelValueDefinition>({
-      identifier: 'custom',
-      blurs: 'content',
-      severity: 'alert',
-      defaultSetting: 'warn',
+      identifier: 'custom', // ラベルの一意識別子
+      blurs: 'content', // 何をぼかすか（content/media/none）
+      severity: 'alert', // 深刻度（alert/inform/none）
+      defaultSetting: 'warn', // デフォルト設定（hide/warn/ignore）
       locales: [
         {
           lang: 'en',
@@ -82,20 +164,31 @@ export const DebugModScreen = ({}: NativeStackScreenProps<
         },
       ],
     })
+  // 表示ビュー選択（post/notifications/account/data）
   const [view, setView] = React.useState<string[]>(['post'])
+  // グローバルラベルの表示文字列（国際化対応の名前・説明）
   const labelStrings = useGlobalLabelStrings()
+  // 現在ログイン中のアカウント情報
   const {currentAccount} = useSession()
 
+  // 高度な設定のフラグ計算（computed values的な使い方）
+  // モデレーション対象が自分自身かどうか
   const isTargetMe =
     scenario[0] === 'label' && scenarioSwitches.includes('targetMe')
+  // セルフラベル（自分で自分のコンテンツにラベル付与）かどうか
   const isSelfLabel =
     scenario[0] === 'label' && scenarioSwitches.includes('selfLabel')
+  // アダルトコンテンツ表示を無効化しているかどうか
   const noAdult =
     scenario[0] === 'label' && scenarioSwitches.includes('noAdult')
+  // ログアウト状態かどうか
   const isLoggedOut =
     scenario[0] === 'label' && scenarioSwitches.includes('loggedOut')
+  // 対象をフォローしているかどうか
   const isFollowing = scenarioSwitches.includes('following')
 
+  // モデレーション対象のDID（分散識別子）を決定
+  // 自分自身が対象の場合は現在のアカウントのDID、それ以外はモックのDID
   const did =
     isTargetMe && currentAccount ? currentAccount.did : 'did:web:bob.test'
 

@@ -298,6 +298,7 @@ export function ListHiddenScreen({
         {/* 条件付きボタングループ */}
         <View style={[a.gap_md]}>
           {/* 保存済みフィードに含まれている場合: 削除ボタンを表示 */}
+          {/* 処理中は無効化 */}
           {savedFeedConfig ? (
             <Button
               variant="solid"
@@ -305,7 +306,7 @@ export function ListHiddenScreen({
               size="large"
               label={_(msg`Remove from saved feeds`)}
               onPress={onRemoveList}
-              disabled={isProcessing}> {/* 処理中は無効化 */}
+              disabled={isProcessing}>
               <ButtonText>
                 <Trans>Remove from saved feeds</Trans>
               </ButtonText>

@@ -1,12 +1,47 @@
+/**
+ * @file Icons.tsx - アイコンコンポーネントのカタログ
+ * @description デザインシステムのアイコンとサイズバリエーションを表示するStorybook画面
+ *
+ * ## Goエンジニア向けの説明
+ * - SVGアイコン: ベクター形式の画像（Goのテンプレートで埋め込むSVGと同様）
+ * - サイズバリエーション: xs, sm, md, lg, xl の5段階
+ * - テーマ対応: fill属性でテーマカラーを適用（ダークモード対応）
+ * - グラデーション: gradient="sky" でグラデーション塗りを適用
+ *
+ * ## 表示されるアイコン
+ * - Globe: 地球アイコン（言語選択、公開設定等に使用）
+ * - ArrowTopRight: 右上矢印（外部リンク表示に使用）
+ * - CalendarDays: カレンダー（日付選択に使用）
+ * - Loader: ローディングスピナー（読み込み中表示）
+ *
+ * ## アーキテクチャ
+ * - 各アイコンを全サイズ並べて表示（視覚的比較用）
+ * - useTheme() でテーマカラーを取得して fill に適用
+ * - Loader はアニメーション付き（回転スピナー）
+ *
+ * @module view/screens/Storybook/Icons
+ */
+
+// React NativeのViewコンポーネント
 import {View} from 'react-native'
 
+// デザインシステム（atoms: スタイル、useTheme: テーマフック）
 import {atoms as a, useTheme} from '#/alf'
+// アイコンコンポーネント群
 import {ArrowTopRight_Stroke2_Corner0_Rounded as ArrowTopRight} from '#/components/icons/Arrow'
 import {CalendarDays_Stroke2_Corner0_Rounded as CalendarDays} from '#/components/icons/CalendarDays'
 import {Globe_Stroke2_Corner0_Rounded as Globe} from '#/components/icons/Globe'
+// ローディングスピナーコンポーネント
 import {Loader} from '#/components/Loader'
+// 見出しコンポーネント
 import {H1} from '#/components/Typography'
 
+/**
+ * Icons - アイコンコンポーネントのカタログ表示
+ *
+ * 各アイコンの全サイズバリエーション（xs〜xl）と
+ * グラデーション塗りオプションを視覚的に確認できる
+ */
 export function Icons() {
   const t = useTheme()
   return (

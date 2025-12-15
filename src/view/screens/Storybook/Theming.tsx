@@ -1,9 +1,41 @@
+/**
+ * @file Theming.tsx - テーマカラーのカタログ
+ * @description デザインシステムのテーマカラー（背景、テキスト、ボーダー）を表示するStorybook画面
+ *
+ * ## Goエンジニア向けの説明
+ * - テーマ: ライト/ダーク/Dimモード対応のカラーセット
+ * - atoms: デザインシステムのスタイルプリミティブ（共通スタイル）
+ * - t.atoms: テーマ依存のスタイル（bg, text_contrast_* 等）
+ *
+ * ## 表示されるカラー
+ * - テキストカラー: text, text_contrast_high/medium/low
+ * - 背景カラー: bg, bg_contrast_25/50/100/200/300
+ * - ボーダーカラー: border_contrast_high/medium/low
+ *
+ * ## アーキテクチャ
+ * - useTheme() でテーマオブジェクトを取得
+ * - Palette コンポーネントでカラーパレット詳細を表示
+ * - 各コントラストレベルを視覚的に比較可能
+ *
+ * @module view/screens/Storybook/Theming
+ */
+
+// React NativeのViewコンポーネント
 import {View} from 'react-native'
 
+// デザインシステム（atoms: 共通スタイル、useTheme: テーマフック）
 import {atoms as a, useTheme} from '#/alf'
+// テキストコンポーネント
 import {Text} from '#/components/Typography'
+// カラーパレット詳細表示コンポーネント
 import {Palette} from './Palette'
 
+/**
+ * Theming - テーマカラーのカタログ表示
+ *
+ * テキスト、背景、ボーダーの各コントラストレベルを
+ * 視覚的に確認できるサンプル集
+ */
 export function Theming() {
   const t = useTheme()
 

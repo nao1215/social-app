@@ -1,8 +1,42 @@
+/**
+ * @file Settings.tsx - 設定リストコンポーネントのカタログ
+ * @description 設定画面で使用されるリストアイテムコンポーネントを表示するStorybook画面
+ *
+ * ## Goエンジニア向けの説明
+ * - SettingsList: 設定項目を統一的に表示するCompound Componentパターン
+ * - LinkItem: タップで画面遷移するリスト項目（React Navigation経由）
+ * - PressableItem: タップでアクション実行するリスト項目
+ * - Item: 表示のみのリスト項目（押下不可）
+ *
+ * ## 表示されるコンポーネント
+ * - SettingsList.LinkItem: 画面遷移リンク項目
+ * - SettingsList.PressableItem: 押下アクション項目（通常/destructive）
+ * - SettingsList.Item: 静的表示項目
+ * - SettingsList.Divider: 区切り線
+ * - SettingsList.ItemIcon: アイコン表示
+ * - SettingsList.ItemText: テキスト表示
+ * - SettingsList.BadgeText: サブテキスト（メールアドレス等）
+ * - SettingsList.BadgeButton: アクション付きバッジ（編集ボタン等）
+ * - SettingsList.Chevron: 右矢印アイコン
+ *
+ * ## スタイルバリエーション
+ * - destructive: 破壊的アクション（サインアウト等、赤色）
+ * - カスタムスタイル: 背景色、ホバー色のオーバーライド
+ * - 長いテキストの折り返し処理
+ *
+ * @module view/screens/Storybook/Settings
+ */
+
+// React NativeのViewコンポーネント
 import {View} from 'react-native'
 
+// 旧トーストAPI
 import * as Toast from '#/view/com/util/Toast'
+// 設定リストコンポーネント群
 import * as SettingsList from '#/screens/Settings/components/SettingsList'
+// デザインシステム（atoms: 共通スタイル、useTheme: テーマフック）
 import {atoms as a, useTheme} from '#/alf'
+// アイコンコンポーネント群
 import {Alien_Stroke2_Corner0_Rounded as AlienIcon} from '#/components/icons/Alien'
 import {BirthdayCake_Stroke2_Corner2_Rounded as BirthdayCakeIcon} from '#/components/icons/BirthdayCake'
 import {BubbleInfo_Stroke2_Corner2_Rounded as BubbleInfoIcon} from '#/components/icons/BubbleInfo'
@@ -16,8 +50,15 @@ import {Pizza_Stroke2_Corner0_Rounded as PizzaIcon} from '#/components/icons/Piz
 import {RaisingHand4Finger_Stroke2_Corner2_Rounded as HandIcon} from '#/components/icons/RaisingHand'
 import {ShieldCheck_Stroke2_Corner0_Rounded as ShieldIcon} from '#/components/icons/Shield'
 import {Window_Stroke2_Corner2_Rounded as WindowIcon} from '#/components/icons/Window'
+// テキストコンポーネント
 import {Text} from '#/components/Typography'
 
+/**
+ * Settings - 設定リストコンポーネントのカタログ表示
+ *
+ * LinkItem, PressableItem, Item, Divider など
+ * 設定画面で使用される全コンポーネントのバリエーションを確認できる
+ */
 export function Settings() {
   const t = useTheme()
   return (

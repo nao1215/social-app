@@ -1,9 +1,42 @@
+/**
+ * @file Typography.tsx - タイポグラフィカタログ
+ * @description デザインシステムのテキストスタイルを網羅的に表示するStorybook画面
+ *
+ * ## Goエンジニア向けの説明
+ * - タイポグラフィ: テキストのスタイル体系（フォントサイズ、太さ、スタイル）
+ * - atoms: デザインシステムのスタイルプリミティブ（CSSのユーティリティクラスに相当）
+ * - RichText: メンションやリンクを含むリッチテキスト（HTMLのようなマークアップ）
+ *
+ * ## 表示されるバリエーション
+ * - フォントサイズ: text_5xl〜text_2xs（特大〜極小）
+ * - フォントウェイト: regular, medium, bold, heavy
+ * - フォントスタイル: normal, italic
+ * - RichText: メンション（@bsky.app）、リンク（https://）の自動検出
+ *
+ * ## アーキテクチャ
+ * - 各スタイルの実際の表示を確認できるサンプルテキスト
+ * - atoms スタイルの適用例をそのまま表示
+ * - selectable プロパティでテキスト選択機能のデモ
+ *
+ * @module view/screens/Storybook/Typography
+ */
+
+// React NativeのViewコンポーネント
 import {View} from 'react-native'
 
+// デザインシステムのスタイルプリミティブ
 import {atoms as a} from '#/alf'
+// リッチテキストコンポーネント（メンション、リンクの自動リンク化）
 import {RichText} from '#/components/RichText'
+// テキストコンポーネント
 import {Text} from '#/components/Typography'
 
+/**
+ * Typography - タイポグラフィのカタログ表示
+ *
+ * 全てのテキストスタイル（サイズ × ウェイト × スタイル）を
+ * 視覚的に確認できるサンプル集
+ */
 export function Typography() {
   return (
     <View style={[a.gap_md]}>

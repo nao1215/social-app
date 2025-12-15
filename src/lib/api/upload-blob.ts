@@ -1,6 +1,27 @@
+/**
+ * expo-file-system: Expoのファイルシステムモジュール
+ * copyAsync: ファイルを非同期でコピーする関数
+ *
+ * 【Go言語での類似処理】
+ * io.Copy(dst, src) でファイルをコピーするのと同様
+ */
 import {copyAsync} from 'expo-file-system'
+
+/**
+ * @atproto/api: AT Protocol（Bluesky）のAPI クライアントライブラリ
+ * BskyAgent: Bluesky APIとの通信を行うエージェントクラス
+ * ComAtprotoRepoUploadBlob: Blobアップロードのレスポンス型定義
+ *
+ * 【AT Protocolとは】
+ * 分散型SNSのためのオープンプロトコル。
+ * Blueskyはこのプロトコルを使用している。
+ */
 import {BskyAgent, ComAtprotoRepoUploadBlob} from '@atproto/api'
 
+/**
+ * safeDeleteAsync: 安全にファイルを削除する関数
+ * エラーが発生しても例外をスローしない（静かに失敗する）
+ */
 import {safeDeleteAsync} from '#/lib/media/manip'
 
 /**
@@ -58,6 +79,26 @@ export async function uploadBlob(
   throw new TypeError(`Invalid uploadBlob input: ${typeof input}`)
 }
 
+/**
+ * ファイルURIをBlobオブジェクトに変換する内部関数
+ *
+ * 【Blobとは】
+ * Binary Large Object の略。画像や動画などのバイナリデータを
+ * JavaScript で扱うためのオブジェクト。
+ * Go言語での []byte に相当する。
+ *
+ * 【XMLHttpRequestを使う理由】
+ * Android では fetch() が file:// URI に対応していない。
+ * そのため、古い XMLHttpRequest API を使用してファイルを読み込む。
+ *
+ * 【Promiseパターン】
+ * new Promise((resolve, reject) => {...}) は非同期処理のラッパー。
+ * - resolve(値): 成功時に呼び出し、値を返す
+ * - reject(エラー): 失敗時に呼び出し、エラーを投げる
+ *
+ * @param uri ファイルのURI（file://で始まる）
+ * @returns Blobオブジェクトを含むPromise
+ */
 async function asBlob(uri: string): Promise<Blob> {
   return withSafeFile(uri, async safeUri => {
     // Note
@@ -67,43 +108,89 @@ async function asBlob(uri: string): Promise<Blob> {
     // return fetch(safeUri.replace('file:///', 'file:/')).then(r => r.blob())
 
     return await new Promise((resolve, reject) => {
+      // XMLHttpRequest: ブラウザ標準のHTTPリクエストAPI（古いが互換性が高い）
       const xhr = new XMLHttpRequest()
+
+      // onload: リクエスト成功時のコールバック
       xhr.onload = () => resolve(xhr.response)
+
+      // onerror: リクエスト失敗時のコールバック
       xhr.onerror = () => reject(new Error('Failed to load blob'))
+
+      // responseType: レスポンスの形式を指定（'blob'でバイナリデータとして受け取る）
       xhr.responseType = 'blob'
+
+      // open: リクエストの初期化（メソッド, URL, 非同期フラグ）
       xhr.open('GET', safeUri, true)
+
+      // send: リクエストを送信（GETなのでbodyはnull）
       xhr.send(null)
     })
   })
 }
 
-// HACK
-// React native has a bug that inflates the size of jpegs on upload
-// we get around that by renaming the file ext to .bin
-// see https://github.com/facebook/react-native/issues/27099
-// -prf
+/**
+ * React Native の JPEG アップロードバグを回避するためのラッパー関数
+ *
+ * 【問題の背景】
+ * React Native には JPEG ファイルをアップロードする際に
+ * ファイルサイズが膨らんでしまうバグがある（issue #27099）。
+ * 原因は、.jpg/.jpeg 拡張子のファイルに対して
+ * 内部で再エンコーディングが行われるため。
+ *
+ * 【解決策】
+ * 拡張子を .bin に変更することで、React Native の
+ * JPEG 検出を回避し、バイナリデータとしてそのまま送信する。
+ *
+ * 【ジェネリクス <T> について】
+ * <T> は型パラメータ。関数の戻り値の型を柔軟に指定できる。
+ * Go言語の interface{} や any に似ているが、型安全性が保たれる。
+ *
+ * 【高階関数パターン】
+ * fn: (path: string) => Promise<T> は「関数を引数に取る関数」。
+ * Go言語での func(path string) T のようなコールバック関数に相当。
+ *
+ * 【try-finally パターン】
+ * finally ブロックは成功・失敗に関わらず必ず実行される。
+ * Go言語の defer に相当する。一時ファイルの削除に使用。
+ *
+ * @param uri ファイルのURI
+ * @param fn ファイルパスを受け取って処理を行う関数
+ * @returns 処理結果
+ *
+ * @see https://github.com/facebook/react-native/issues/27099
+ */
 async function withSafeFile<T>(
   uri: string,
   fn: (path: string) => Promise<T>,
 ): Promise<T> {
+  // JPEG ファイルの場合のみ特別な処理を行う
   if (uri.endsWith('.jpeg') || uri.endsWith('.jpg')) {
     // Since we don't "own" the file, we should avoid renaming or modifying it.
     // Instead, let's copy it to a temporary file and use that (then remove the
     // temporary file).
+    // 元ファイルは変更せず、一時ファイルにコピーして処理する
+
+    // 拡張子を .bin に変更（React Native の JPEG 検出を回避）
     const newPath = uri.replace(/\.jpe?g$/, '.bin')
     try {
+      // ファイルをコピー（元ファイルを保護）
       await copyAsync({from: uri, to: newPath})
     } catch {
       // Failed to copy the file, just use the original
+      // コピー失敗時は元ファイルをそのまま使用
       return await fn(uri)
     }
     try {
+      // 一時ファイルで処理を実行
       return await fn(newPath)
     } finally {
       // Remove the temporary file
+      // 成功・失敗に関わらず一時ファイルを削除（Go の defer に相当）
       await safeDeleteAsync(newPath)
     }
   } else {
+    // JPEG 以外のファイルはそのまま処理
     return fn(uri)
   }
 }

@@ -452,21 +452,19 @@ export function Item({children, label, style, onPress, ...rest}: ItemProps) {
   } = useInteractionState()
 
   return (
+    // スプレッド演算子: restオブジェクトの全プロパティを展開
+    // Goでの類似例: 構造体の全フィールドをコピー
+    // 例: disabled, testIDなどのPressablePropsが含まれる
     <Pressable
       {...rest}
-      {/* ↑ スプレッド演算子: restオブジェクトの全プロパティを展開 */}
-      {/* ↑ Goでの類似例: 構造体の全フィールドをコピー */}
-      {/* ↑ 例: disabled, testIDなどのPressablePropsが含まれる */}
-
+      // 空文字列: アクセシビリティヒントなし
       accessibilityHint=""
-      {/* ↑ 空文字列: アクセシビリティヒントなし */}
+      // アクセシビリティラベル: スクリーンリーダーが読み上げる
       accessibilityLabel={label}
-      {/* ↑ アクセシビリティラベル: スクリーンリーダーが読み上げる */}
-
+      // フォーカス取得時のハンドラー
       onFocus={onFocus}
-      {/* ↑ フォーカス取得時のハンドラー */}
+      // フォーカス喪失時のハンドラー
       onBlur={onBlur}
-      {/* ↑ フォーカス喪失時のハンドラー */}
 
       onPress={async e => {
         // ↑ 非同期アロー関数: async (e) => {...}
@@ -602,13 +600,12 @@ export function ItemText({children, style}: ItemTextProps) {
   // ↑ Goユーザー向け: コンテキストから値を取得するイメージ
 
   return (
+    // 1行に制限 - 長いテキストは省略される
+    // 省略記号の位置: 中央（"Long...Text"のような形）
+    // 他のオプション: "head"（先頭）, "tail"（末尾）, "clip"（切り取り）
     <Text
       numberOfLines={1}
-      {/* ↑ 1行に制限 - 長いテキストは省略される */}
       ellipsizeMode="middle"
-      {/* ↑ 省略記号の位置: 中央（"Long...Text"のような形） */}
-      {/* ↑ 他のオプション: "head"（先頭）, "tail"（末尾）, "clip"（切り取り） */}
-
       style={[
         // テキストスタイル配列
         a.flex_1,          // フレックスボックスで利用可能なスペースを埋める
@@ -660,11 +657,11 @@ export function ItemIcon({icon: Comp}: ItemIconProps) {
   const {disabled} = useMenuItemContext()
 
   return (
+    // コンポーネントを動的にレンダリング
+    // Goユーザー向け: 関数ポインタを呼び出すイメージ
+    // アイコンサイズ: 大
     <Comp
-      {/* ↑ コンポーネントを動的にレンダリング */}
-      {/* ↑ Goユーザー向け: 関数ポインタを呼び出すイメージ */}
       size="lg"
-      {/* ↑ アイコンサイズ: 大 */}
       fill={
         // ↑ アイコンの塗りつぶし色
         disabled
@@ -904,11 +901,10 @@ export function Group({children, style}: GroupProps) {
               <View style={[a.border_b, t.atoms.border_contrast_low]} />
               // ↑ a.border_b: 下ボーダー（区切り線）
             ) : null}
+            {/* cloneElement: 既存の要素を複製して新しいプロパティを追加 */}
+            {/* Goユーザー向け: 構造体のコピー作成に似た操作 */}
             {cloneElement(child, {
-              // ↑ cloneElement: 既存の要素を複製して新しいプロパティを追加
-              // ↑ Goユーザー向け: 構造体のコピー作成に似た操作
-              // @ts-expect-error cloneElement is not aware of the types
-              // ↑ TypeScriptエラーを無視: cloneElementは型推論が完全ではない
+              // @ts-ignore cloneElement is not aware of the types
               style: {
                 borderRadius: 0,  // 角丸を無効化（グループの角丸を使用）
                 borderWidth: 0,   // ボーダーを無効化（グループのボーダーを使用）
@@ -942,19 +938,18 @@ function Cancel() {
   const context = useMenuContext()
 
   return (
+    // アクセシビリティラベル: "このダイアログを閉じる"
+    // ボタンサイズ: 小
+    // ボタンバリアント: ゴースト（背景なし）
+    // ボタンカラー: セカンダリー（控えめな色）
+    // プレス時: メニューを閉じる
+    // アロー関数: () => {...} 短い無名関数の構文
     <Button
       label={_(msg`Close this dialog`)}
-      {/* ↑ アクセシビリティラベル: "このダイアログを閉じる" */}
       size="small"
-      {/* ↑ ボタンサイズ: 小 */}
       variant="ghost"
-      {/* ↑ ボタンバリアント: ゴースト（背景なし） */}
       color="secondary"
-      {/* ↑ ボタンカラー: セカンダリー（控えめな色） */}
       onPress={() => context.control.close()}>
-      {/* ↑ プレス時: メニューを閉じる */}
-      {/* ↑ アロー関数: () => {...} 短い無名関数の構文 */}
-
       <ButtonText>
         <Trans>Cancel</Trans>
         {/* ↑ Trans: 翻訳可能なテキストコンポーネント */}

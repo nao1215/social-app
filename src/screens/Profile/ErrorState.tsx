@@ -152,13 +152,14 @@ export function ErrorState({error}: {error: string}) {
              - accessibilityHint: ボタンの動作説明（視覚障害者向け）
              - onPress: クリック/タップ時のイベントハンドラ（GoのHTTPハンドラに相当）
         */}
+        {/* セカンダリカラー、塗りつぶしスタイル、イベントハンドラを設定 */}
         <Button
-          size="small" // ボタンサイズ
-          color="secondary" // セカンダリカラー
-          variant="solid" // 塗りつぶしスタイル
-          label={_(msg`Go Back`)} // アクセシビリティラベル（翻訳済み）
-          accessibilityHint="Returns to previous page" // 動作のヒント
-          onPress={onPressBack}> {/* イベントハンドラを設定 */}
+          size="small"
+          color="secondary"
+          variant="solid"
+          label={_(msg`Go Back`)}
+          accessibilityHint="Returns to previous page"
+          onPress={onPressBack}>
           <ButtonText>
             <Trans>Go Back</Trans>
           </ButtonText>

@@ -1,15 +1,55 @@
+/**
+ * @file Dialogs.tsx - ダイアログコンポーネントのカタログ
+ * @description モーダルダイアログ、プロンプト、メニュー内ダイアログのStorybook画面
+ *
+ * ## Goエンジニア向けの説明
+ * - モーダルダイアログ: 画面上にオーバーレイ表示されるUI（HTTPリクエスト中のローディング表示に似た概念）
+ * - useDialogControl: ダイアログの開閉を制御するフック（open/close メソッド）
+ * - Compound Component: Dialog.Outer + Dialog.Inner の親子関係パターン
+ * - コールバック: close(() => { ... }) でダイアログ閉じた後の処理を指定
+ *
+ * ## 表示されるコンポーネント
+ * - Dialog: 基本ダイアログ（ScrollableInner で長いコンテンツ対応）
+ * - Prompt: 確認ダイアログ（タイトル、説明、アクションボタン）
+ * - メニュー内ダイアログ: ダイアログ内にMenuを配置するパターン
+ *
+ * ## テスト機能
+ * - 複数ダイアログ同時オープン: closeAllDialogs で一括クローズ
+ * - アンマウントテスト: ダイアログが表示中にコンポーネントがアンマウントされるケース
+ * - close コールバックのタイミングテスト: アニメーション完了後の処理
+ * - リデュースモーション検出: アクセシビリティ設定の確認
+ *
+ * @module view/screens/Storybook/Dialogs
+ */
+
+// Reactコアライブラリ
 import React from 'react'
+// React NativeのViewコンポーネント
 import {View} from 'react-native'
 
+// ダイアログ状態管理コンテキスト（全ダイアログの一括クローズ等）
 import {useDialogStateControlContext} from '#/state/dialogs'
+// デザインシステムのスタイルプリミティブ
 import {atoms as a} from '#/alf'
+// ボタンコンポーネント
 import {Button, ButtonText} from '#/components/Button'
+// ダイアログコンポーネント群
 import * as Dialog from '#/components/Dialog'
+// メニューコンポーネント群
 import * as Menu from '#/components/Menu'
+// プロンプト（確認ダイアログ）コンポーネント群
 import * as Prompt from '#/components/Prompt'
+// タイポグラフィコンポーネント
 import {H3, P, Text} from '#/components/Typography'
+// プラットフォーム情報取得（リデュースモーション設定等）
 import {PlatformInfo} from '../../../../modules/expo-bluesky-swiss-army'
 
+/**
+ * Dialogs - ダイアログコンポーネントのカタログ表示
+ *
+ * 各種ダイアログ（基本、スクロール可能、プロンプト、メニュー付き）と
+ * エッジケースのテスト機能を提供
+ */
 export function Dialogs() {
   const scrollable = Dialog.useDialogControl()
   const basic = Dialog.useDialogControl()

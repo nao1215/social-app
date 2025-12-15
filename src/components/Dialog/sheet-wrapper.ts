@@ -33,33 +33,11 @@ import {isIOS} from '#/platform/detection'
  *
  * Go言語との対比：
  * - カスタムフック: Goでは関数を返す関数として実装
- *   ```go
- *   func SheetWrapper() func(context.Context, func() error) error {
- *       return func(ctx context.Context, fn func() error) error {
- *           if isIOS {
- *               // ステータスバー変更
- *               defer func() { /* 元に戻す */ }()
- *           }
- *           return fn()
- *       }
- *   }
- *   ```
+ * - SheetWrapper関数はfunc() error型の引数を受け取り実行する
  *
  * 使用例：
- * ```typescript
- * function MyComponent() {
- *   const wrapSheet = useSheetWrapper()
- *
- *   const pickImage = async () => {
- *     // 画像ピッカーをラップして呼び出し
- *     // ステータスバーが自動的にlight色に変更される
- *     const result = await wrapSheet(ImagePicker.launchImageLibraryAsync())
- *     console.log(result)
- *   }
- *
- *   return <Button onPress={pickImage}>画像を選択</Button>
- * }
- * ```
+ * const wrapSheet = useSheetWrapper()
+ * const result = await wrapSheet(ImagePicker.launchImageLibraryAsync())
  */
 export function useSheetWrapper() {
   /**
@@ -86,21 +64,10 @@ export function useSheetWrapper() {
      * @param promise - 実行するPromise（画像ピッカー、共有シートなど）
      * @returns Promiseの実行結果
      *
-     * @template T - Promise実行結果の型（ジェネリック型パラメータ）
-     *
      * Go言語との対比：
      * - ジェネリック関数: Go 1.18以降のジェネリクスに相当
-     *   ```go
-     *   func WrapSheet[T any](promise func() (T, error)) (T, error) {
-     *       if isIOS {
-     *           entry := pushStatusBar("light")
-     *           defer popStatusBar(entry)
-     *       }
-     *       return promise()
-     *   }
-     *   ```
      * - async関数: Goでは通常の関数として実装、goroutineで並行実行
-     * - Promise<T>: Goの (T, error) 戻り値パターンに相当
+     * - Promise: Goの (T, error) 戻り値パターンに相当
      *
      * async/await説明：
      * - async: 関数が必ずPromiseを返すことを示す
@@ -120,23 +87,7 @@ export function useSheetWrapper() {
          *
          * Go言語との対比：
          * - スタック管理: Goではスライスやリンクリストで実装
-         *   ```go
-         *   type StatusBarStack struct {
-         *       entries []*StatusBarEntry
-         *   }
-         *
-         *   func (s *StatusBarStack) Push(entry *StatusBarEntry) {
-         *       s.entries = append(s.entries, entry)
-         *       // 適用処理
-         *   }
-         *
-         *   func (s *StatusBarStack) Pop() {
-         *       if len(s.entries) > 0 {
-         *           s.entries = s.entries[:len(s.entries)-1]
-         *           // 前の設定を復元
-         *       }
-         *   }
-         *   ```
+         * - Push/Pop操作でスタックを操作
          */
         const entry = SystemBars.pushStackEntry({
           style: {
@@ -155,12 +106,6 @@ export function useSheetWrapper() {
          *
          * Go言語との対比：
          * - await: Goでは単なる関数呼び出し（同期的）
-         *   ```go
-         *   result, err := executePromise()
-         *   if err != nil {
-         *       // エラーハンドリング
-         *   }
-         *   ```
          * - エラーハンドリング: Goでは明示的なerror戻り値で管理
          *   TypeScriptではtry/catchまたはPromiseのcatchで管理
          */
@@ -175,12 +120,6 @@ export function useSheetWrapper() {
          *
          * Go言語との対比：
          * - クリーンアップ処理: Goではdefer文で実現
-         *   ```go
-         *   entry := SystemBars.PushStackEntry(...)
-         *   defer SystemBars.PopStackEntry(entry)
-         *   result := executePromise()
-         *   return result
-         *   ```
          *
          * defer vs 明示的呼び出し:
          * - Go: deferは関数終了時に自動実行（例外時も必ず実行）
@@ -199,25 +138,6 @@ export function useSheetWrapper() {
          *
          * Go言語との対比：
          * - プラットフォーム分岐: Goではビルドタグやruntime.GOOSで実現
-         *   ```go
-         *   //go:build ios
-         *   // +build ios
-         *
-         *   func wrapSheet(promise func() error) error {
-         *       entry := pushStatusBar()
-         *       defer popStatusBar(entry)
-         *       return promise()
-         *   }
-         *   ```
-         *
-         *   ```go
-         *   //go:build !ios
-         *   // +build !ios
-         *
-         *   func wrapSheet(promise func() error) error {
-         *       return promise()
-         *   }
-         *   ```
          */
         return await promise
       }
@@ -232,12 +152,6 @@ export function useSheetWrapper() {
      * Go言語との対比：
      * - 依存配列: Goには直接対応する概念なし
      * - Goでは関数を変数に代入して再利用するだけ
-     *   ```go
-     *   wrapSheet := func(promise func() error) error {
-     *       // 実装
-     *   }
-     *   // wrapSheetは常に同じ関数インスタンス
-     *   ```
      *
      * 依存配列が空の理由：
      * - isIOSは定数（実行時に変わらない）

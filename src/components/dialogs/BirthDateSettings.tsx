@@ -242,13 +242,14 @@ function BirthdayInner({
 
       {/* 保存/完了ボタン（Webでは右寄せ） */}
       <View style={isWeb && [a.flex_row, a.justify_end]}>
+        {/* 13歳未満の場合は無効化 */}
         <Button
           label={hasChanged ? _(msg`Save birthday`) : _(msg`Done`)}
           size="large"
           onPress={onSave}
           variant="solid"
           color="primary"
-          disabled={isUnder13}> {/* 13歳未満の場合は無効化 */}
+          disabled={isUnder13}>
           <ButtonText>
             {hasChanged ? <Trans>Save</Trans> : <Trans>Done</Trans>}
           </ButtonText>

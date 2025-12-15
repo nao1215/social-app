@@ -34,12 +34,7 @@ import {RemoveScrollBar} from 'react-remove-scroll-bar'
  * 4. アンマウント時: すべての変更を自動的に復元
  *
  * 使用例:
- * ```tsx
- * <Modal>
- *   <LockScroll /> {/* Webではスクロールをロック */}
- *   <ModalContent />
- * </Modal>
- * ```
+ * Modal内でLockScrollを使用すると、Webではスクロールをロック
  *
  * 技術的詳細:
  * - CSSのcalc()を使用してスクロールバー幅を計算

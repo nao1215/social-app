@@ -24,12 +24,7 @@
  * このコンポーネントは常にnullを返します。
  *
  * 使用例:
- * ```tsx
- * <Modal>
- *   <LockScroll /> {/* ネイティブでは何もしない */}
- *   <ModalContent />
- * </Modal>
- * ```
+ * Modal内でLockScrollを使用すると、ネイティブでは何もしない
  *
  * @returns null（何もレンダリングしない）
  */

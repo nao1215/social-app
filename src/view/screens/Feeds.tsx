@@ -1,120 +1,251 @@
+/**
+ * @file Feeds.tsx - フィード管理画面
+ * @description ユーザーが保存したフィードと人気フィードを表示・検索・管理する画面
+ *
+ * ## Goエンジニア向けの説明
+ * - Reactコンポーネント: Goのhttp.HandlerFuncに相当するが、複雑な状態管理を持つ
+ * - TanStack Query: GoのORMやキャッシュレイヤーに相当。サーバー状態を自動管理
+ * - フラットリスト: 仮想スクロールによる大量データの効率的な描画（GoのDBカーソルに似た概念）
+ * - デバウンス: 連続した関数呼び出しを遅延実行（GoのRate Limitingに似た機能）
+ *
+ * ## 主な機能
+ * - ユーザーの保存済みフィード一覧表示（ピン留め対応）
+ * - 人気フィードの検索・一覧表示（無限スクロール）
+ * - フィード検索機能（デバウンス付き）
+ * - プルトゥリフレッシュによる再読み込み
+ * - 新規投稿作成用FABボタン
+ *
+ * ## アーキテクチャ
+ * - 複雑な状態管理: 複数のTanStack Queryフックによるサーバー状態管理
+ * - 仮想化リスト: FlatListSlice型による型安全なアイテム管理
+ * - 条件分岐レンダリング: ログイン状態や検索状態に応じた動的UI
+ * - パフォーマンス最適化: React.useMemo、React.useCallbackによるメモ化
+ *
+ * ## データフロー
+ * 1. useSavedFeeds: 保存済みフィード取得（TanStack Query）
+ * 2. useGetPopularFeedsQuery: 人気フィード取得（無限スクロール対応）
+ * 3. useSearchPopularFeedsMutation: フィード検索実行
+ * 4. items useMemo: 上記3つの状態を統合してFlatListSliceに変換
+ * 5. List（FlatList）: アイテムを仮想スクロール表示
+ *
+ * @module view/screens/Feeds
+ */
+
+// React本体: UIコンポーネントの基盤ライブラリ
 import React from 'react'
+// React Native基本コンポーネント: ActivityIndicator=ローディングスピナー、StyleSheet=スタイル、View=コンテナ
 import {ActivityIndicator, StyleSheet, View} from 'react-native'
+// AT Protocol型定義: フィード関連のBsky型定義（Goのprotoファイルに相当）
 import {type AppBskyFeedDefs} from '@atproto/api'
+// Lingui国際化: msg=翻訳キー、Trans=翻訳可能なテキストコンポーネント
 import {msg, Trans} from '@lingui/macro'
+// Lingui国際化フック: 現在のロケール情報と翻訳関数を提供
 import {useLingui} from '@lingui/react'
+// React Navigation: 画面フォーカス時の副作用実行用フック
 import {useFocusEffect} from '@react-navigation/native'
+// Lodashデバウンス: 連続実行を防ぐ遅延実行関数（GoのRate Limitingパターン）
 import debounce from 'lodash.debounce'
 
+// カスタムフック: 投稿作成モーダルを開く関数を提供
 import {useOpenComposer} from '#/lib/hooks/useOpenComposer'
+// カスタムフック: テーマカラーパレットを取得（ダークモード等）
 import {usePalette} from '#/lib/hooks/usePalette'
+// カスタムフック: レスポンシブデザイン用のメディアクエリ判定
 import {useWebMediaQueries} from '#/lib/hooks/useWebMediaQueries'
+// アイコン: 投稿作成ボタン用のアイコン
 import {ComposeIcon2} from '#/lib/icons'
+// 型定義: 画面コンポーネントのプロパティ型（React NavigationのNavigator設定）
 import {
   type CommonNavigatorParams,
   type NativeStackScreenProps,
 } from '#/lib/routes/types'
+// ユーティリティ: エラーメッセージのクリーンアップ処理
 import {cleanError} from '#/lib/strings/errors'
+// スタイル定数: 共通スタイル定義（padding、margin等のユーティリティ）
 import {s} from '#/lib/styles'
+// プラットフォーム検出: iOS/Android/Webの実行環境判定
 import {isNative, isWeb} from '#/platform/detection'
+// TanStack Query: フィード関連のデータ取得・検索フック（GoのORMに相当）
 import {
   type SavedFeedItem,
   useGetPopularFeedsQuery,
   useSavedFeeds,
   useSearchPopularFeedsMutation,
 } from '#/state/queries/feed'
+// セッション管理: ログイン状態の取得
 import {useSession} from '#/state/session'
+// シェル状態管理: ミニマルモード（ヘッダー表示制御）の設定フック
 import {useSetMinimalShellMode} from '#/state/shell'
+// エラーメッセージコンポーネント: エラー表示用UI
 import {ErrorMessage} from '#/view/com/util/error/ErrorMessage'
+// FAB: Floating Action Button（投稿作成ボタン）
 import {FAB} from '#/view/com/util/fab/FAB'
+// リストコンポーネント: 仮想スクロール対応のFlatList（Goのページネーションに相当）
 import {List, type ListMethods} from '#/view/com/util/List'
+// ローディングプレースホルダー: スケルトンスクリーン表示
 import {FeedFeedLoadingPlaceholder} from '#/view/com/util/LoadingPlaceholder'
+// テキストコンポーネント: スタイル適用可能なテキスト表示
 import {Text} from '#/view/com/util/text/Text'
+// エンプティステート: Followingフィードが無い場合の表示
 import {NoFollowingFeed} from '#/screens/Feeds/NoFollowingFeed'
+// エンプティステート: 保存済みフィードが無い場合の表示
 import {NoSavedFeedsOfAnyType} from '#/screens/Feeds/NoSavedFeedsOfAnyType'
+// デザインシステム: Alfアトミックスタイルとテーマフック
 import {atoms as a, useTheme} from '#/alf'
+// ボタンアイコンコンポーネント: アイコン付きボタン
 import {ButtonIcon} from '#/components/Button'
+// 区切り線コンポーネント: 要素間の視覚的な区切り
 import {Divider} from '#/components/Divider'
+// フィードカードコンポーネント: フィード情報の表示カード
 import * as FeedCard from '#/components/FeedCard'
+// 検索入力コンポーネント: 検索ボックスUI
 import {SearchInput} from '#/components/forms/SearchInput'
+// アイコン円形背景: アイコンの装飾用円形背景
 import {IconCircle} from '#/components/IconCircle'
+// アイコン: 右シェブロン（矢印）
 import {ChevronRight_Stroke2_Corner0_Rounded as ChevronRight} from '#/components/icons/Chevron'
+// アイコン: タイムラインフィルター
 import {FilterTimeline_Stroke2_Corner0_Rounded as FilterTimeline} from '#/components/icons/FilterTimeline'
+// アイコン: 虫眼鏡付きリスト
 import {ListMagnifyingGlass_Stroke2_Corner0_Rounded} from '#/components/icons/ListMagnifyingGlass'
+// アイコン: キラキラ付きリスト
 import {ListSparkle_Stroke2_Corner0_Rounded} from '#/components/icons/ListSparkle'
+// アイコン: 設定歯車
 import {SettingsGear2_Stroke2_Corner0_Rounded as Gear} from '#/components/icons/SettingsGear2'
+// レイアウトコンポーネント: 画面全体のレイアウト構造
 import * as Layout from '#/components/Layout'
+// リンクコンポーネント: ナビゲーション用のリンク
 import {Link} from '#/components/Link'
+// リストカードコンポーネント: リスト情報の表示カード
 import * as ListCard from '#/components/ListCard'
 
+// 型定義: React Navigationから渡されるプロパティの型
 type Props = NativeStackScreenProps<CommonNavigatorParams, 'Feeds'>
 
+/**
+ * FlatListに渡すアイテムの型定義（タグ付きユニオン型）
+ *
+ * ## Goとの対比
+ * - Goのinterface{}やswitch type assertionに似た概念
+ * - TypeScriptのDiscriminated Union（判別可能な共用体型）
+ * - typeフィールドで型を判別し、各ケースで異なるプロパティを持つ
+ *
+ * ## アーキテクチャ
+ * - FlatListは異なる種類のアイテムを表示できる
+ * - エラー、ヘッダー、ローディング、データ等を統一的に扱う
+ */
 type FlatlistSlice =
+  // エラーアイテム: エラーメッセージ表示用
   | {
       type: 'error'
       key: string
       error: string
     }
+  // 保存済みフィードセクションのヘッダー
   | {
       type: 'savedFeedsHeader'
       key: string
     }
+  // 保存済みフィードのプレースホルダー（スケルトンスクリーン）
   | {
       type: 'savedFeedPlaceholder'
       key: string
     }
+  // 保存済みフィードが0件の場合のエンプティステート
   | {
       type: 'savedFeedNoResults'
       key: string
     }
+  // 保存済みフィードのデータアイテム
   | {
       type: 'savedFeed'
       key: string
       savedFeed: SavedFeedItem
     }
+  // 保存済みフィードの追加読み込みボタン
   | {
       type: 'savedFeedsLoadMore'
       key: string
     }
+  // 人気フィードセクションのヘッダー
   | {
       type: 'popularFeedsHeader'
       key: string
     }
+  // 人気フィードのローディング表示
   | {
       type: 'popularFeedsLoading'
       key: string
     }
+  // 人気フィードが0件の場合のエンプティステート
   | {
       type: 'popularFeedsNoResults'
       key: string
     }
+  // 人気フィードのデータアイテム
   | {
       type: 'popularFeed'
       key: string
       feedUri: string
       feed: AppBskyFeedDefs.GeneratorView
     }
+  // 人気フィードの追加読み込み中表示（無限スクロール）
   | {
       type: 'popularFeedsLoadingMore'
       key: string
     }
+  // Followingフィードが無い場合の警告表示
   | {
       type: 'noFollowingFeed'
       key: string
     }
 
+/**
+ * フィード画面のメインコンポーネント
+ *
+ * ## Goとの対比
+ * - Goのhttp.HandlerFunc + ビジネスロジック + テンプレートレンダリングを統合
+ * - 複数のTanStack Queryフック = GoのRepository層に相当
+ * - React状態管理 = Goのミドルウェアやコンテキストに相当
+ *
+ * @param _props - ルーティングパラメータ（未使用）
+ */
 export function FeedsScreen(_props: Props) {
+  // テーマパレット取得
   const pal = usePalette('default')
+  // 投稿作成モーダルを開く関数
   const {openComposer} = useOpenComposer()
+  // レスポンシブ判定: モバイルかデスクトップか
   const {isMobile} = useWebMediaQueries()
+  // ローカル状態: 検索クエリ文字列
   const [query, setQuery] = React.useState('')
+  // ローカル状態: Pull-to-Refresh中かどうか
   const [isPTR, setIsPTR] = React.useState(false)
+
+  /**
+   * TanStack Query: 保存済みフィード取得
+   * - data: フィードデータ
+   * - isPlaceholderData: プレースホルダーデータ表示中か（初回読み込み時）
+   * - error: エラーオブジェクト
+   * - refetch: 再取得関数
+   */
   const {
     data: savedFeeds,
     isPlaceholderData: isSavedFeedsPlaceholder,
     error: savedFeedsError,
     refetch: refetchSavedFeeds,
   } = useSavedFeeds()
+
+  /**
+   * TanStack Query: 人気フィード取得（無限スクロール対応）
+   * - data: ページ分割されたフィードデータ（pages配列）
+   * - isFetching: 取得中か
+   * - error: エラーオブジェクト
+   * - refetch: 再取得関数
+   * - fetchNextPage: 次ページ取得関数（GoのLIMIT/OFFSET相当）
+   * - isFetchingNextPage: 次ページ取得中か
+   * - hasNextPage: 次ページが存在するか
+   */
   const {
     data: popularFeeds,
     isFetching: isPopularFeedsFetching,
@@ -124,8 +255,20 @@ export function FeedsScreen(_props: Props) {
     isFetchingNextPage: isPopularFeedsFetchingNextPage,
     hasNextPage: hasNextPopularFeedsPage,
   } = useGetPopularFeedsQuery()
+
+  // 翻訳関数
   const {_} = useLingui()
+  // シェルモード設定関数
   const setMinimalShellMode = useSetMinimalShellMode()
+
+  /**
+   * TanStack Query Mutation: フィード検索実行
+   * - data: 検索結果データ
+   * - mutate: 検索実行関数（GoのPOSTハンドラーに相当）
+   * - reset: 検索結果クリア
+   * - isPending: 検索実行中か
+   * - error: エラーオブジェクト
+   */
   const {
     data: searchResults,
     mutate: search,
@@ -133,48 +276,122 @@ export function FeedsScreen(_props: Props) {
     isPending: isSearchPending,
     error: searchError,
   } = useSearchPopularFeedsMutation()
+
+  // セッション情報: ログイン中かどうか
   const {hasSession} = useSession()
+  // リストコンポーネントへの参照（スクロール制御用）
   const listRef = React.useRef<ListMethods>(null)
 
   /**
-   * A search query is present. We may not have search results yet.
+   * 検索中かどうかの判定
+   * - クエリ文字列が2文字以上なら検索モード
+   * - 検索結果が無くても検索中と判定される（ローディング状態の判別用）
    */
   const isUserSearching = query.length > 1
+
+  /**
+   * デバウンス付き検索関数の生成
+   *
+   * ## Goとの対比
+   * - GoのRate Limiterに似た概念
+   * - 連続した関数呼び出しを500ms遅延させて実行
+   * - useMemoで関数を再生成せず、パフォーマンス最適化
+   *
+   * ## 動作
+   * - ユーザーがタイピング中は検索を実行しない
+   * - タイピング停止後500msで検索実行
+   */
   const debouncedSearch = React.useMemo(
-    () => debounce(q => search(q), 500), // debounce for 500ms
+    () => debounce(q => search(q), 500), // 500msのデバウンス
     [search],
   )
+
+  /**
+   * 投稿作成ボタン押下時のハンドラ
+   * - 投稿作成モーダルを開く
+   */
   const onPressCompose = React.useCallback(() => {
     openComposer({})
   }, [openComposer])
+
+  /**
+   * 検索クエリ変更時のハンドラ
+   *
+   * ## 動作フロー
+   * 1. クエリ文字列を状態に保存
+   * 2. 2文字以上ならデバウンス付き検索実行
+   * 3. 2文字未満なら検索リセット + 人気フィード再取得
+   *
+   * @param text - 検索クエリ文字列
+   */
   const onChangeQuery = React.useCallback(
     (text: string) => {
       setQuery(text)
       if (text.length > 1) {
+        // 検索実行（デバウンス付き）
         debouncedSearch(text)
       } else {
+        // 検索解除時は通常の人気フィードに戻す
         refetchPopularFeeds()
         resetSearch()
       }
     },
     [setQuery, refetchPopularFeeds, debouncedSearch, resetSearch],
   )
+
+  /**
+   * 検索キャンセルボタン押下時のハンドラ
+   * - クエリをクリアして通常の人気フィード表示に戻す
+   */
   const onPressCancelSearch = React.useCallback(() => {
     setQuery('')
     refetchPopularFeeds()
     resetSearch()
   }, [refetchPopularFeeds, setQuery, resetSearch])
+
+  /**
+   * 検索フォーム送信時のハンドラ
+   * - Enterキー押下時に即座に検索実行（デバウンス経由）
+   */
   const onSubmitQuery = React.useCallback(() => {
     debouncedSearch(query)
   }, [query, debouncedSearch])
+
+  /**
+   * Pull-to-Refresh実行時のハンドラ
+   *
+   * ## Goとの対比
+   * - Promise.allはGoのerrgroup.Groupに相当
+   * - 複数の非同期処理を並列実行し、全て完了を待つ
+   *
+   * ## 動作
+   * 1. PTRフラグをtrueに設定（ローディング表示）
+   * 2. 保存済みフィードと人気フィードを並列で再取得
+   * 3. エラーは無視（catchで握りつぶす）
+   * 4. PTRフラグをfalseに設定（ローディング非表示）
+   */
   const onPullToRefresh = React.useCallback(async () => {
     setIsPTR(true)
     await Promise.all([
-      refetchSavedFeeds().catch(_e => undefined),
-      refetchPopularFeeds().catch(_e => undefined),
+      refetchSavedFeeds().catch(_e => undefined), // エラー無視
+      refetchPopularFeeds().catch(_e => undefined), // エラー無視
     ])
     setIsPTR(false)
   }, [setIsPTR, refetchSavedFeeds, refetchPopularFeeds])
+
+  /**
+   * リスト下端到達時のハンドラ（無限スクロール）
+   *
+   * ## Goとの対比
+   * - GoのページネーションLIMIT/OFFSETに相当
+   * - TanStack Queryが次ページのカーソルを自動管理
+   *
+   * ## ガード条件
+   * - 取得中の場合は実行しない
+   * - 検索中の場合は実行しない（検索結果は無限スクロール非対応）
+   * - 次ページが無い場合は実行しない
+   * - エラーがある場合は実行しない
+   */
   const onEndReached = React.useCallback(() => {
     if (
       isPopularFeedsFetching ||
@@ -183,6 +400,7 @@ export function FeedsScreen(_props: Props) {
       popularFeedsError
     )
       return
+    // 次ページ取得
     fetchNextPopularFeedsPage()
   }, [
     isPopularFeedsFetching,
@@ -192,17 +410,44 @@ export function FeedsScreen(_props: Props) {
     fetchNextPopularFeedsPage,
   ])
 
+  // 画面フォーカス時の副作用: ミニマルモード無効化
   useFocusEffect(
     React.useCallback(() => {
       setMinimalShellMode(false)
     }, [setMinimalShellMode]),
   )
 
+  /**
+   * FlatListアイテムの生成（メモ化）
+   *
+   * ## Goとの対比
+   * - Goのテンプレートレンダリングに相当するが、より複雑
+   * - 複数のAPI結果を統合してUI用の配列に変換
+   * - useMemoで依存配列が変わるまで再計算しない（パフォーマンス最適化）
+   *
+   * ## データフロー
+   * 1. 保存済みフィードセクション生成（ログイン時のみ）
+   *    - ヘッダー → エラー or プレースホルダー or データアイテム
+   *    - ピン留めフィードを先頭に表示
+   * 2. 人気フィードセクション生成（常に表示 or 条件付き）
+   *    - ヘッダー + 検索ボックス → エラー or ローディング or データアイテム
+   *    - 検索中は検索結果、通常時は人気フィード（無限スクロール）
+   *
+   * ## 型安全性
+   * - FlatlistSlice型でアイテムの種類を型で判別
+   * - renderItem関数でtypeによる分岐レンダリング
+   *
+   * @returns FlatlistSlice[] - FlatListに渡すアイテム配列
+   */
   const items = React.useMemo(() => {
     let slices: FlatlistSlice[] = []
+    // 実際の保存済みフィード数があるか判定（プレースホルダーでも0件でない場合true）
     const hasActualSavedCount =
       !isSavedFeedsPlaceholder ||
       (isSavedFeedsPlaceholder && (savedFeeds?.count || 0) > 0)
+    // 「人気フィード」セクションを表示するか判定
+    // - 未ログイン: 常に表示
+    // - ログイン済み: 保存済みフィードがある場合のみ表示
     const canShowDiscoverSection =
       !hasSession || (hasSession && hasActualSavedCount)
 

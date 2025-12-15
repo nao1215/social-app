@@ -235,13 +235,14 @@ export function NoFeedsPinned({
                - onPressはGoのHTTPハンドラ関数に似たイベントハンドラ
                - _(msg`...`)はLingui翻訳マクロ（実行時に適切な言語の文字列を返す）
           */}
+          {/* API実行中は無効化、プライマリカラー、ボタンバリアント（塗りつぶし） */}
           <Button
-            disabled={isPending} // API実行中は無効化
-            label={_(msg`Apply default recommended feeds`)} // アクセシビリティ用ラベル
-            size="large" // ボタンサイズ
-            variant="solid" // ボタンバリアント（塗りつぶし）
-            color="primary" // プライマリカラー
-            onPress={addRecommendedFeeds}> {/* クリック時のハンドラ */}
+            disabled={isPending}
+            label={_(msg`Apply default recommended feeds`)}
+            size="large"
+            variant="solid"
+            color="primary"
+            onPress={addRecommendedFeeds}>
             {/* ボタン内アイコン（左側配置） */}
             <ButtonIcon icon={Plus} position="left" />
             {/* ボタンテキスト */}
@@ -253,13 +254,14 @@ export function NoFeedsPinned({
                - Linkコンポーネントはルーティング機能を提供
                - toプロパティで遷移先のパス指定（Goのhttp.Redirectに似た動作）
                - React Navigationがルーティングを管理（Goのgorilla/muxに相当）
+               - セカンダリカラー
           */}
           <Link
             label={_(msg`Browse other feeds`)}
-            to="/feeds" // 遷移先パス
+            to="/feeds"
             size="large"
             variant="solid"
-            color="secondary"> {/* セカンダリカラー */}
+            color="secondary">
             <ButtonIcon icon={ListSparkle} position="left" />
             <ButtonText>{_(msg`Browse other feeds`)}</ButtonText>
           </Link>

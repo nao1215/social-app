@@ -1,10 +1,44 @@
+/**
+ * @file Links.tsx - リンクコンポーネントのカタログ
+ * @description テキストリンク、ボタン形式リンク、カスタムリンクのStorybook画面
+ *
+ * ## Goエンジニア向けの説明
+ * - Link: 内部/外部URLへのナビゲーション（HTMLの<a>タグ相当）
+ * - InlineLinkText: テキスト内に埋め込むリンク（文中のハイパーリンク）
+ * - 内部リンク: bsky.app, bsky.social 等アプリ内ナビゲーション
+ * - 外部リンク: google.com 等の外部サイト（新しいタブで開く）
+ *
+ * ## 表示されるコンポーネント
+ * - InlineLinkText: インラインテキストリンク（スタイルカスタマイズ可能）
+ * - Link as button: ボタンスタイルのリンク（variant, color, size 指定）
+ * - Link with custom children: カスタムUIを持つリンク（カード形式等）
+ *
+ * ## アーキテクチャ
+ * - to プロパティで遷移先URL指定（内部パス or 外部URL）
+ * - label プロパティでアクセシビリティ用ラベル指定
+ * - variant/color/size でボタン形式リンクのスタイル指定
+ *
+ * @module view/screens/Storybook/Links
+ */
+
+// React NativeのViewコンポーネント
 import {View} from 'react-native'
 
+// デザインシステム（atoms: 共通スタイル、useTheme: テーマフック）
 import {atoms as a, useTheme} from '#/alf'
+// ボタンテキストコンポーネント
 import {ButtonText} from '#/components/Button'
+// リンクコンポーネント群
 import {InlineLinkText, Link} from '#/components/Link'
+// 見出し・テキストコンポーネント
 import {H1, Text} from '#/components/Typography'
 
+/**
+ * Links - リンクコンポーネントのカタログ表示
+ *
+ * インラインリンク、ボタン形式リンク、カスタムリンクの
+ * 各バリエーションを視覚的に確認できる
+ */
 export function Links() {
   const t = useTheme()
   return (

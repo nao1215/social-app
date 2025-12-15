@@ -1,11 +1,48 @@
+/**
+ * @file Toasts.tsx - トーストコンポーネントのカタログ
+ * @description 通知メッセージ（トースト）のバリエーションを表示するStorybook画面
+ *
+ * ## Goエンジニア向けの説明
+ * - トースト: 一時的に表示される通知メッセージ（画面下部から出現）
+ * - Toast.show(): トーストを表示するAPI（Goのlog.Println的な通知機能）
+ * - Compound Component: Toast.Outer + Toast.Icon + Toast.Text の組み合わせ
+ * - タイプ: default, success, info, warning, error の5種類
+ *
+ * ## 表示されるトースト
+ * - DefaultToast: アイコン + テキストの基本トースト
+ * - ToastWithAction: アクションボタン付きトースト
+ * - LongToastWithAction: 複数行テキスト + アクションボタン
+ * - 各タイプ（success, info, warning, error）のサンプル
+ * - duration オプションで表示時間のカスタマイズ
+ *
+ * ## アーキテクチャ
+ * - Toast.show(content, options) でトースト表示
+ * - JSX要素またはstring をコンテンツとして渡せる
+ * - deprecatedShow は旧API（互換性のために維持）
+ *
+ * @module view/screens/Storybook/Toasts
+ */
+
+// React Nativeコンポーネント
 import {Pressable, View} from 'react-native'
 
+// 旧トーストAPI（非推奨、互換性のために維持）
 import {show as deprecatedShow} from '#/view/com/util/Toast'
+// デザインシステムのスタイルプリミティブ
 import {atoms as a} from '#/alf'
+// アイコンコンポーネント
 import {Globe_Stroke2_Corner0_Rounded as GlobeIcon} from '#/components/icons/Globe'
+// 新トーストコンポーネント群
 import * as Toast from '#/components/Toast'
+// 見出しコンポーネント
 import {H1} from '#/components/Typography'
 
+/**
+ * DefaultToast - 基本的なトースト表示
+ *
+ * @param content - トーストに表示するテキスト
+ * @param type - トーストのタイプ（default, success, info, warning, error）
+ */
 function DefaultToast({
   content,
   type = 'default',

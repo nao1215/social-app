@@ -1,15 +1,56 @@
+/**
+ * @file Forms.tsx - フォームコンポーネントのカタログ
+ * @description テキスト入力、トグル、日付選択などフォーム要素のStorybook画面
+ *
+ * ## Goエンジニア向けの説明
+ * - React.useState: フォームの状態管理（Goの構造体フィールドに相当）
+ * - React.useRef: DOM要素への参照（GoのポインタでHTML要素を参照するような感覚）
+ * - Compound Component: TextField.Root + TextField.Input のような親子関係パターン
+ * - 制御コンポーネント: 状態と onChange でフォームの値を管理
+ *
+ * ## 表示されるコンポーネント
+ * - TextField: テキスト入力（アイコン付き、バリデーションエラー状態、サフィックス）
+ * - Textarea: 複数行テキスト入力
+ * - DateField: 日付選択
+ * - Toggle: スイッチ、チェックボックス、ラジオボタン
+ * - ToggleButton: グループ化されたトグルボタン
+ *
+ * ## アーキテクチャ
+ * - 各フォームコンポーネントの状態を useState で管理
+ * - maxSelections で最大選択数を制限（複数選択トグル）
+ * - disabled, isInvalid プロパティで状態バリエーション表示
+ *
+ * @module view/screens/Storybook/Forms
+ */
+
+// Reactコアライブラリ
 import React from 'react'
+// React Nativeの型定義とコンポーネント
 import {type TextInput, View} from 'react-native'
 
+// デザインシステムのスタイルプリミティブ
 import {atoms as a} from '#/alf'
+// ボタンコンポーネント
 import {Button, ButtonText} from '#/components/Button'
+// 日付入力フィールド
 import {DateField, LabelText} from '#/components/forms/DateField'
+// テキスト入力フィールド群（Compound Component）
 import * as TextField from '#/components/forms/TextField'
+// トグルコンポーネント群（チェックボックス、スイッチ、ラジオ）
 import * as Toggle from '#/components/forms/Toggle'
+// トグルボタングループ
 import * as ToggleButton from '#/components/forms/ToggleButton'
+// アイコンコンポーネント
 import {Globe_Stroke2_Corner0_Rounded as Globe} from '#/components/icons/Globe'
+// 見出しコンポーネント
 import {H1, H3} from '#/components/Typography'
 
+/**
+ * Forms - フォームコンポーネントのカタログ表示
+ *
+ * テキスト入力、トグル、日付選択など全てのフォームバリエーションと
+ * 状態（disabled, invalid, 選択数制限）を視覚的に確認できる
+ */
 export function Forms() {
   const [toggleGroupAValues, setToggleGroupAValues] = React.useState(['a'])
   const [toggleGroupBValues, setToggleGroupBValues] = React.useState(['a', 'b'])

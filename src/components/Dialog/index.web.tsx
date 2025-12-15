@@ -655,14 +655,17 @@ export function Close() {
           right: a.pr_md.paddingRight, // 右部位置
         },
       ]}>
+      {/* 小サイズ、ゴーストバリアント（背景なし）、セカンダリーカラー、丸型 */}
+      {/* クリックで閉じる、アクセシビリティラベル */}
       <Button
-        size="small"         // 小サイズ
-        variant="ghost"      // ゴーストバリアント（背景なし）
-        color="secondary"    // セカンダリーカラー
-        shape="round"        // 丸型
-        onPress={() => close()} // クリックで閉じる
-        label={_(msg`Close active dialog`)}> {/* アクセシビリティラベル */}
-        <ButtonIcon icon={X} size="md" /> {/* Xアイコン */}
+        size="small"
+        variant="ghost"
+        color="secondary"
+        shape="round"
+        onPress={() => close()}
+        label={_(msg`Close active dialog`)}>
+        {/* Xアイコン */}
+        <ButtonIcon icon={X} size="md" />
       </Button>
     </View>
   )

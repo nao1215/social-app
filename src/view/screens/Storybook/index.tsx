@@ -1,13 +1,52 @@
+/**
+ * @file index.tsx - Storybook メイン画面
+ * @description デザインシステムのコンポーネントカタログを表示する開発者向けツール
+ *
+ * ## Goエンジニア向けの説明
+ * - Storybook: UIコンポーネントのカタログ/ドキュメントツール（Goのgodocに相当する役割）
+ * - デザインシステム: 一貫したUIを構築するためのコンポーネント・スタイル集
+ * - ThemeProvider: テーマをコンテキスト経由で子孫に注入（Goのcontext.WithValueに類似）
+ *
+ * ## 主な機能
+ * - テーマ切り替え（System/Light/Dim/Dark）
+ * - ボタン、フォーム、タイポグラフィ等の各コンポーネントのプレビュー
+ * - アイコン、シャドウ、スペーシング等のデザイントークン表示
+ * - ダイアログ、メニュー、トースト等のインタラクティブコンポーネントのテスト
+ * - ブレイクポイント（レスポンシブデザイン）の確認
+ *
+ * ## アーキテクチャ
+ * - 各コンポーネントカテゴリを個別ファイルに分離（Buttons.tsx, Forms.tsx 等）
+ * - ThemeProvider でテーマをラップしてプレビュー
+ * - ListContained で仮想スクロールリストのテスト
+ *
+ * ## 開発者向け情報
+ * - __DEV__ ビルドでのみアクセス可能
+ * - 設定 → 開発者オプション → Storybook からアクセス
+ * - 新しいコンポーネント追加時はここにも追加してプレビュー可能に
+ *
+ * @module view/screens/Storybook
+ */
+
+// Reactコアライブラリ
 import React from 'react'
+// React NativeのViewコンポーネント（レイアウトコンテナ）
 import {View} from 'react-native'
+// React Navigationフック
 import {useNavigation} from '@react-navigation/native'
 
+// ナビゲーション型定義
 import {type NavigationProp} from '#/lib/routes/types'
+// テーマ設定フック（カラーモード切り替え）
 import {useSetThemePrefs} from '#/state/shell'
+// 仮想スクロールリストのデモコンポーネント
 import {ListContained} from '#/view/screens/Storybook/ListContained'
+// デザインシステム（atoms: スタイルプリミティブ、ThemeProvider: テーマ注入）
 import {atoms as a, ThemeProvider} from '#/alf'
+// ボタンコンポーネント
 import {Button, ButtonText} from '#/components/Button'
+// レイアウトコンポーネント
 import * as Layout from '#/components/Layout'
+// 各コンポーネントカテゴリのデモ
 import {Admonitions} from './Admonitions'
 import {Breakpoints} from './Breakpoints'
 import {Buttons} from './Buttons'
@@ -23,6 +62,15 @@ import {Theming} from './Theming'
 import {Toasts} from './Toasts'
 import {Typography} from './Typography'
 
+/**
+ * Storybook - コンポーネントカタログのメイン画面
+ *
+ * Goでの例:
+ * func StorybookHandler(w http.ResponseWriter, r *http.Request) {
+ *   components := componentService.GetAll()
+ *   render(w, "storybook.html", components)
+ * }
+ */
 export function Storybook() {
   return (
     <Layout.Screen>

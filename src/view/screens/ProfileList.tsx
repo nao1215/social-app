@@ -1,49 +1,104 @@
+/**
+ * @file ProfileList.tsx - ユーザーリスト詳細画面
+ * @description ユーザーリスト（Curate List / Mod List）の表示・管理を行う画面コンポーネント
+ *
+ * ## Goエンジニア向けの説明
+ * - Reactコンポーネント: UIを返す関数（Goのハンドラーに相当）
+ * - フック: 状態管理とライフサイクル（context.Context に似た役割）
+ * - TanStack Query: データフェッチとキャッシュ（Goのリポジトリパターン + キャッシュレイヤー）
+ * - Compound Component: 複数の子コンポーネントで構成される親コンポーネント
+ *
+ * ## 主な機能
+ * - Curate List（キュレーションリスト）: 投稿フィード + メンバーリスト表示
+ * - Mod List（モデレーションリスト）: ミュート/ブロック対象ユーザーリスト
+ * - リストのピン留め/保存/削除
+ * - リストメンバーの追加/削除（所有者のみ）
+ * - リストのミュート/ブロック購読（モデレーション用）
+ * - リストの共有/通報
+ *
+ * ## アーキテクチャ
+ * - 3段階ローディング: URI解決 → リストデータ取得 → 画面表示
+ * - タブ切り替え: PagerWithHeader（投稿フィード ⇔ メンバーリスト）
+ * - モデレーション: リスト非表示（!hide ラベル）の処理
+ * - 楽観的UI更新: メンバー追加/削除時に即座にUIを更新
+ *
+ * @module view/screens/ProfileList
+ */
+
+// Reactコアライブラリ
 import React, {useCallback, useMemo} from 'react'
+// React Native基本コンポーネント
 import {StyleSheet, View} from 'react-native'
+// アニメーション参照（スクロール制御用）
 import {useAnimatedRef} from 'react-native-reanimated'
+// AT Protocol API型定義とモデレーション関数
 import {
-  AppBskyGraphDefs,
-  AtUri,
-  moderateUserList,
-  type ModerationOpts,
-  RichText as RichTextAPI,
+  AppBskyGraphDefs, // グラフ（リスト、フォロー等）の型定義
+  AtUri, // AT Protocol URI（at://did/collection/rkey 形式）
+  moderateUserList, // リストのモデレーション判定
+  type ModerationOpts, // モデレーション設定
+  RichText as RichTextAPI, // リッチテキスト（リンク、メンション等を含む）
 } from '@atproto/api'
+// アイコンコンポーネント
 import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome'
+// 国際化（翻訳）
 import {msg, Trans} from '@lingui/macro'
 import {useLingui} from '@lingui/react'
+// React Navigation（画面フォーカス、ナビゲーション）
 import {useFocusEffect, useIsFocused} from '@react-navigation/native'
 import {useNavigation} from '@react-navigation/native'
+// TanStack Query クライアント（キャッシュ操作）
 import {useQueryClient} from '@tanstack/react-query'
 
+// 触覚フィードバック（タップ時の振動）
 import {useHaptics} from '#/lib/haptics'
+// 投稿作成ダイアログを開く
 import {useOpenComposer} from '#/lib/hooks/useOpenComposer'
+// テーマカラー
 import {usePalette} from '#/lib/hooks/usePalette'
+// ページタイトル設定（ブラウザタブ名）
 import {useSetTitle} from '#/lib/hooks/useSetTitle'
+// レスポンシブデザイン判定
 import {useWebMediaQueries} from '#/lib/hooks/useWebMediaQueries'
+// 投稿作成アイコン
 import {ComposeIcon2} from '#/lib/icons'
+// リストURLの生成
 import {makeListLink} from '#/lib/routes/links'
+// ナビゲーション型定義
 import {
   type CommonNavigatorParams,
   type NativeStackScreenProps,
 } from '#/lib/routes/types'
 import {type NavigationProp} from '#/lib/routes/types'
+// URL共有機能
 import {shareUrl} from '#/lib/sharing'
+// エラーメッセージのクリーンアップ
 import {cleanError} from '#/lib/strings/errors'
+// 共有用URL生成
 import {toShareUrl} from '#/lib/strings/url-helpers'
+// 共通スタイル
 import {s} from '#/lib/styles'
+// ロガー
 import {logger} from '#/logger'
+// プラットフォーム判定（iOS/Android/Web）
 import {isNative, isWeb} from '#/platform/detection'
+// ソフトリセットイベント（画面更新トリガー）
 import {listenSoftReset} from '#/state/events'
+// モーダルコントロール
 import {useModalControls} from '#/state/modals'
+// モデレーション設定取得
 import {useModerationOpts} from '#/state/preferences/moderation-opts'
+// リスト関連のミューテーション（ブロック、ミュート、削除）
 import {
   useListBlockMutation,
   useListDeleteMutation,
   useListMuteMutation,
   useListQuery,
 } from '#/state/queries/list'
+// フィード型定義とクエリキー
 import {type FeedDescriptor} from '#/state/queries/post-feed'
 import {RQKEY as FEED_RQKEY} from '#/state/queries/post-feed'
+// フィード保存関連のミューテーション
 import {
   useAddSavedFeedsMutation,
   usePreferencesQuery,
@@ -51,39 +106,67 @@ import {
   useRemoveFeedMutation,
   useUpdateSavedFeedsMutation,
 } from '#/state/queries/preferences'
+// URI解決クエリ（ハンドル → DID 変換）
 import {useResolveUriQuery} from '#/state/queries/resolve-uri'
+// クエリキャッシュの無効化ユーティリティ
 import {truncateAndInvalidate} from '#/state/queries/util'
+// セッション情報（ログイン中のユーザー）
 import {useSession} from '#/state/session'
+// シェルモード制御
 import {useSetMinimalShellMode} from '#/state/shell'
+// リストメンバー一覧コンポーネント
 import {ListMembers} from '#/view/com/lists/ListMembers'
+// ヘッダー付きページャー（タブ切り替え）
 import {PagerWithHeader} from '#/view/com/pager/PagerWithHeader'
+// 投稿フィードコンポーネント
 import {PostFeed} from '#/view/com/posts/PostFeed'
+// プロフィールサブページヘッダー
 import {ProfileSubpageHeader} from '#/view/com/profile/ProfileSubpageHeader'
+// 空状態表示
 import {EmptyState} from '#/view/com/util/EmptyState'
+// フローティングアクションボタン（投稿作成ボタン）
 import {FAB} from '#/view/com/util/fab/FAB'
+// レガシーボタン
 import {Button} from '#/view/com/util/forms/Button'
+// ドロップダウンメニュー
 import {
   type DropdownItem,
   NativeDropdown,
 } from '#/view/com/util/forms/NativeDropdown'
+// リスト参照型（FlatList の ref 型）
 import {type ListRef} from '#/view/com/util/List'
+// 最新投稿読み込みボタン
 import {LoadLatestBtn} from '#/view/com/util/load-latest/LoadLatestBtn'
+// ローディング画面
 import {LoadingScreen} from '#/view/com/util/LoadingScreen'
+// テキストコンポーネント
 import {Text} from '#/view/com/util/text/Text'
+// トースト通知
 import * as Toast from '#/view/com/util/Toast'
+// リスト非表示画面（モデレーション）
 import {ListHiddenScreen} from '#/screens/List/ListHiddenScreen'
+// デザインシステム
 import {atoms as a} from '#/alf'
+// 新しいボタンコンポーネント
 import {Button as NewButton, ButtonIcon, ButtonText} from '#/components/Button'
+// ダイアログコントロール
 import {useDialogControl} from '#/components/Dialog'
+// リストメンバー追加/削除ダイアログ
 import {ListAddRemoveUsersDialog} from '#/components/dialogs/lists/ListAddRemoveUsersDialog'
+// ユーザー追加アイコン
 import {PersonPlus_Stroke2_Corner0_Rounded as PersonPlusIcon} from '#/components/icons/Person'
+// レイアウトコンポーネント
 import * as Layout from '#/components/Layout'
+// モデレーション非表示コンポーネント
 import * as Hider from '#/components/moderation/Hider'
+// 通報ダイアログ
 import {
   ReportDialog,
   useReportDialogControl,
 } from '#/components/moderation/ReportDialog'
+// プロンプトダイアログ
 import * as Prompt from '#/components/Prompt'
+// リッチテキスト表示
 import {RichText} from '#/components/RichText'
 
 interface SectionRef {
