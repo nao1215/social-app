@@ -1,3 +1,24 @@
+/**
+ * 共有ユーティリティモジュール
+ *
+ * 【概要】
+ * URLやテキストをネイティブ共有機能またはクリップボードで共有。
+ * プラットフォーム間の差異を吸収した統一的なAPIを提供。
+ *
+ * 【プラットフォーム別動作】
+ * - iOS: Share.share({url}) - URLとして共有
+ * - Android: Share.share({message}) - メッセージとして共有
+ * - Web: クリップボードにコピー + トースト表示
+ *
+ * 【iOS/Androidの違い】
+ * - iOSはurlプロパティでリッチなプレビューが表示される
+ * - Androidはmessageプロパティのみサポート
+ *
+ * 【Goユーザー向け補足】
+ * - async/await: Goのgoroutineとチャネルに相当
+ * - expo-clipboard: システムクリップボードへのアクセス
+ * - Toast: Goのlog.Printfに相当するユーザー通知
+ */
 import {Share} from 'react-native'
 // import * as Sharing from 'expo-sharing'
 import {setStringAsync} from 'expo-clipboard'
@@ -8,10 +29,14 @@ import {isAndroid, isIOS} from '#/platform/detection'
 import * as Toast from '#/view/com/util/Toast'
 
 /**
- * This function shares a URL using the native Share API if available, or copies it to the clipboard
- * and displays a toast message if not (mostly on web)
- * @param {string} url - A string representing the URL that needs to be shared or copied to the
- * clipboard.
+ * URLを共有またはクリップボードにコピー
+ *
+ * 【プラットフォーム別】
+ * - iOS: ネイティブ共有シート（URLプレビュー付き）
+ * - Android: ネイティブ共有シート（メッセージとして）
+ * - Web: クリップボードにコピー
+ *
+ * @param url 共有するURL
  */
 export async function shareUrl(url: string) {
   if (isAndroid) {
@@ -27,11 +52,13 @@ export async function shareUrl(url: string) {
 }
 
 /**
- * This function shares a text using the native Share API if available, or copies it to the clipboard
- * and displays a toast message if not (mostly on web)
+ * テキストを共有またはクリップボードにコピー
  *
- * @param {string} text - A string representing the text that needs to be shared or copied to the
- * clipboard.
+ * 【プラットフォーム別】
+ * - iOS/Android: ネイティブ共有シート
+ * - Web: クリップボードにコピー
+ *
+ * @param text 共有するテキスト
  */
 export async function shareText(text: string) {
   if (isAndroid || isIOS) {

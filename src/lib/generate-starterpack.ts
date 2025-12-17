@@ -1,3 +1,33 @@
+/**
+ * スターターパック生成モジュール
+ *
+ * 【概要】
+ * Blueskyの「スターターパック」機能を自動生成。
+ * スターターパックは新規ユーザーが一括でフォローできるアカウント集。
+ *
+ * 【スターターパックとは】
+ * - 特定のトピックや興味に関連するアカウントを集めたリスト
+ * - 新規ユーザーのオンボーディングを支援
+ * - ワンクリックで複数アカウントをフォロー可能
+ *
+ * 【処理フロー】
+ * 1. ユーザーのフォロー中アカウントを取得
+ * 2. リファレンスリスト（リスト型レコード）を作成
+ * 3. スターターパック本体を作成
+ * 4. AppViewへの反映を待機
+ *
+ * 【AT Protocolの概念】
+ * - app.bsky.graph.list: リストを表すレコード
+ * - app.bsky.graph.listitem: リストの項目
+ * - app.bsky.graph.starterpack: スターターパック本体
+ * - com.atproto.repo.applyWrites: バッチ書き込みAPI
+ *
+ * 【Goユーザー向け補足】
+ * - useMutation: TanStack Queryのデータ更新フック
+ *   GoでのHTTP POSTリクエスト + 状態管理に相当
+ * - $Typed: AT Protocol SDKの型付きオブジェクト
+ * - Promise.all: Goのsync.WaitGroupに相当
+ */
 import {
   type $Typed,
   type AppBskyActorDefs,
@@ -17,6 +47,20 @@ import {enforceLen} from '#/lib/strings/helpers'
 import {useAgent} from '#/state/session'
 import type * as bsky from '#/types/bsky'
 
+/**
+ * スターターパック用のリストを作成
+ *
+ * 【処理内容】
+ * 1. app.bsky.graph.list レコードを作成
+ * 2. 指定されたプロフィール群を listitem として追加
+ *
+ * @param name リストの名前
+ * @param description リストの説明（オプション）
+ * @param descriptionFacets 説明文内のリンク/メンション等
+ * @param profiles 追加するプロフィール一覧
+ * @param agent Bluesky APIエージェント
+ * @returns 作成されたリストのURIとCID
+ */
 export const createStarterPackList = async ({
   name,
   description,
@@ -52,6 +96,22 @@ export const createStarterPackList = async ({
   return list
 }
 
+/**
+ * スターターパック自動生成用のReact Queryミューテーション
+ *
+ * 【機能】
+ * - ユーザーのフォロー中アカウントを自動収集
+ * - 「{ユーザー名}'s Starter Pack」という名前で生成
+ * - 最低7人以上のフォローが必要
+ *
+ * 【エラー条件】
+ * - ERROR_DATA: プロフィール取得失敗
+ * - NOT_ENOUGH_FOLLOWERS: フォロー数が7未満
+ *
+ * @param onSuccess 成功時のコールバック（URI/CIDを受け取る）
+ * @param onError エラー時のコールバック
+ * @returns TanStack QueryのMutationフック
+ */
 export function useGenerateStarterPackMutation({
   onSuccess,
   onError,
@@ -132,6 +192,18 @@ export function useGenerateStarterPackMutation({
   })
 }
 
+/**
+ * リストアイテム作成用のレコードオブジェクトを生成
+ *
+ * 【AT Protocolの構造】
+ * - $type: レコードタイプの識別子
+ * - collection: 保存先のコレクション名
+ * - value: レコードの実データ
+ *
+ * @param did 追加するユーザーのDID
+ * @param listUri 追加先リストのAT URI
+ * @returns applyWrites用のCreateオペレーション
+ */
 function createListItem({
   did,
   listUri,
@@ -151,14 +223,26 @@ function createListItem({
   }
 }
 
+/**
+ * AppViewへのデータ反映を待機
+ *
+ * 【なぜ待機が必要か】
+ * - AT Protocolは分散システム
+ * - PDSへの書き込み後、AppViewへの伝播に時間がかかる
+ * - 即座にgetStarterPackを呼ぶと404になる可能性
+ *
+ * @param agent Bluesky APIエージェント
+ * @param uri 作成したスターターパックのURI
+ * @param fn 準備完了を判定する関数
+ */
 async function whenAppViewReady(
   agent: BskyAgent,
   uri: string,
   fn: (res?: AppBskyGraphGetStarterPack.Response) => boolean,
 ) {
   await until(
-    5, // 5 tries
-    1e3, // 1s delay between tries
+    5, // 最大5回試行
+    1e3, // 1秒間隔でリトライ
     fn,
     () => agent.app.bsky.graph.getStarterPack({starterPack: uri}),
   )

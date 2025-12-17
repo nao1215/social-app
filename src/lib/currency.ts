@@ -1,3 +1,23 @@
+/**
+ * 通貨フォーマットユーティリティモジュール
+ *
+ * 【概要】
+ * ユーザーの地域・言語設定に基づいて通貨を適切にフォーマット。
+ * 国コードから通貨を自動判定し、Intl.NumberFormatで表示。
+ *
+ * 【通貨決定の優先順位】
+ * 1. デバイスのロケール設定（expo-localization）
+ * 2. アプリの言語設定
+ * 3. ジオロケーション（IP位置情報）
+ * 4. デフォルト: USD
+ *
+ * 【Goユーザー向け補足】
+ * - Intl.NumberFormat: Go/golangでは golang.org/x/text/currency に相当
+ * - useMemo: 計算結果のキャッシュ。Goではsync.Onceに類似
+ * - Record<string, string>: Goのmap[string]stringに相当
+ *
+ * @see https://github.com/zoontek/react-native-localize
+ */
 import React from 'react'
 
 import {deviceLocales} from '#/locale/deviceLocales'
@@ -5,6 +25,8 @@ import {useGeolocationStatus} from '#/state/geolocation'
 import {useLanguagePrefs} from '#/state/preferences'
 
 /**
+ * 国コード（ISO 3166-1 alpha-2）から通貨コード（ISO 4217）へのマッピング
+ *
  * From react-native-localize
  *
  * MIT License
@@ -266,26 +288,49 @@ export const countryCodeToCurrency: Record<string, string> = {
 }
 
 /**
- * Best-guess currency formatting.
+ * 通貨フォーマット用のReactフック
  *
- * Attempts to use `getLocales` from `expo-localization` if available,
- * otherwise falls back to the `persisted.appLanguage` setting, and geolocation
- * API for region.
+ * 【機能】
+ * - ユーザーの地域に適した通貨を自動選択
+ * - ロケールに応じたフォーマット（$1,000 / ¥1,000 / €1.000）
+ * - カスタムオプションでフォーマットをカスタマイズ可能
+ *
+ * 【戻り値】
+ * - format: 数値を通貨文字列に変換する関数
+ * - currency: 使用される通貨コード（例: 'usd', 'jpy'）
+ * - countryCode: 国コード（例: 'us', 'jp'）
+ * - languageTag: 言語タグ（例: 'en-US', 'ja-JP'）
+ *
+ * 【使用例】
+ * const { format, currency } = useFormatCurrency()
+ * console.log(format(1000)) // "$1,000.00" (en-US) / "¥1,000" (ja-JP)
+ *
+ * @param options Intl.NumberFormatの追加オプション
+ * @returns 通貨フォーマット関連の情報とフォーマット関数
  */
 export function useFormatCurrency(
   options?: Parameters<typeof Intl.NumberFormat>[1],
 ) {
+  // ジオロケーション情報を取得（IP位置情報から）
   const {location: geolocation} = useGeolocationStatus()
+  // ユーザーが設定したアプリの言語
   const {appLanguage} = useLanguagePrefs()
+
   return React.useMemo(() => {
+    // デバイスの最初のロケールを取得
     const locale = deviceLocales.at(0)
+    // 言語タグの決定（優先順位: ロケール > アプリ設定 > デフォルト）
     const languageTag = locale?.languageTag || appLanguage || 'en-US'
+    // 国コードの決定（優先順位: ロケール > ジオロケーション > デフォルト）
     const countryCode = (
       locale?.regionCode ||
       geolocation?.countryCode ||
       'us'
     ).toLowerCase()
+    // 国コードから通貨を決定
     const currency = countryCodeToCurrency[countryCode] || 'usd'
+
+    // Intl.NumberFormatでフォーマッターを作成
     const format = new Intl.NumberFormat(languageTag, {
       ...(options || {}),
       style: 'currency',

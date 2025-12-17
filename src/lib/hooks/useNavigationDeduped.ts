@@ -1,9 +1,36 @@
+/**
+ * 重複排除ナビゲーションフックモジュール
+ *
+ * 【概要】
+ * ナビゲーション操作の連続呼び出しを防止するラッパーフック。
+ * ユーザーの高速タップによる画面の重複遷移を防ぐ。
+ *
+ * 【解決する問題】
+ * - ボタン連打による同じ画面の複数プッシュ
+ * - ネットワーク遅延中の重複ナビゲーション
+ * - アニメーション中の追加ナビゲーション
+ *
+ * 【ラップされるメソッド】
+ * - push/navigate/replace: 画面遷移
+ * - dispatch: カスタムアクション
+ * - popToTop/popTo/pop/goBack: 戻る操作
+ * - canGoBack/getState/getParent: 状態取得（重複排除なし）
+ *
+ * 【Goユーザー向け補足】
+ * - useMemo: 計算結果のキャッシュ（Goのsync.Poolに類似）
+ * - Parameters<typeof T>: 関数Tの引数型を取得（Goのreflectに相当）
+ * - Pick<T, K>: 型Tから特定のキーKのみを抽出
+ */
 import {useMemo} from 'react'
 import {useNavigation} from '@react-navigation/core'
 
 import {useDedupe} from '#/lib/hooks/useDedupe'
 import {type NavigationProp} from '#/lib/routes/types'
 
+/**
+ * 重複排除機能付きナビゲーションの型定義
+ * NavigationPropから必要なメソッドのみを抽出
+ */
 export type DebouncedNavigationProp = Pick<
   NavigationProp,
   | 'popToTop'

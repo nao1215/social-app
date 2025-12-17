@@ -1,3 +1,28 @@
+/**
+ * インテントハンドラーフックモジュール
+ *
+ * 【概要】
+ * ディープリンク/URLスキームからのインテントを処理するフック群。
+ * 外部アプリやシステムからBlueskyアプリを起動した際の動作を制御。
+ *
+ * 【対応インテント】
+ * - compose: 投稿作成画面を開く（テキスト、画像、動画指定可能）
+ * - verify-email: メール確認コードの処理
+ * - age-assurance: 年齢確認リダイレクト処理
+ * - apply-ota: OTAアップデートの適用
+ *
+ * 【ディープリンク形式】
+ * - bluesky://intent/compose?text=Hello
+ * - bluesky://intent/verify-email?code=123456
+ *
+ * 【セキュリティ対策】
+ * - 外部URLの画像読み込みを防止（IP漏洩対策）
+ * - 画像URI形式のバリデーション
+ *
+ * 【Goユーザー向け補足】
+ * - Linking.useURL(): アプリ起動時のURL取得（Goのos.Args相当）
+ * - useEffect: URLの変更検知と処理（Goのgoroutineでの監視に相当）
+ */
 import React from 'react'
 import {Alert} from 'react-native'
 import * as Linking from 'expo-linking'
@@ -15,13 +40,33 @@ import {useIntentDialogs} from '#/components/intents/IntentDialogs'
 import {Referrer} from '../../../modules/expo-bluesky-swiss-army'
 import {useApplyPullRequestOTAUpdate} from './useOTAUpdates'
 
+/**
+ * サポートするインテントタイプ
+ */
 type IntentType = 'compose' | 'verify-email' | 'age-assurance' | 'apply-ota'
 
+/**
+ * 画像URI形式のバリデーション正規表現
+ * 形式: path|width|height
+ * 例: /path/to/image.jpg|1920|1080
+ */
 const VALID_IMAGE_REGEX = /^[\w.:\-_/]+\|\d+(\.\d+)?\|\d+(\.\d+)?$/
 
-// This needs to stay outside of react to persist between account switches
+/**
+ * 前回処理したインテントURL
+ * アカウント切り替え時もリセットされないようにReact外で保持
+ */
 let previousIntentUrl = ''
 
+/**
+ * インテントハンドラーフック
+ *
+ * 【動作】
+ * 1. アプリ起動時/フォアグラウンド復帰時のURLを監視
+ * 2. インテント形式のURLをパース
+ * 3. インテントタイプに応じた処理を実行
+ * 4. 同じURLの重複処理を防止
+ */
 export function useIntentHandler() {
   const incomingUrl = Linking.useURL()
   const composeIntent = useComposeIntent()

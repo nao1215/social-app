@@ -1,3 +1,31 @@
+/**
+ * OTA（Over The Air）アップデートモジュール
+ *
+ * 【概要】
+ * アプリストアを経由せずにJavaScriptバンドルを更新するOTA機能を提供。
+ * Expo Updatesを使用して、ユーザーに気づかれないバックグラウンド更新を実現。
+ *
+ * 【更新タイミング】
+ * 1. アプリ起動時（初回チェック）
+ * 2. バックグラウンドから復帰後15分以上経過時
+ * 3. TestFlight版は即座にプロンプト表示
+ *
+ * 【更新フロー】
+ * 1. setExtraParams: ビルド番号、チャンネル情報を設定
+ * 2. checkForUpdateAsync: 更新の有無を確認
+ * 3. fetchUpdateAsync: 更新をダウンロード
+ * 4. reloadAsync: アプリを再起動して適用
+ *
+ * 【チャンネル種別】
+ * - production: 本番リリース
+ * - testflight: TestFlight版（即座に更新）
+ * - pull-request-*: PR検証用デプロイ
+ *
+ * 【Goユーザー向け補足】
+ * - OTA更新: Goバイナリでは不可能だが、JSバンドルは動的に置換可能
+ * - AppState: アプリのライフサイクル監視（Goのシグナルハンドラに相当）
+ * - setTimeout: 遅延実行（Goのtime.AfterFuncに相当）
+ */
 import React from 'react'
 import {Alert, AppState, type AppStateStatus} from 'react-native'
 import {nativeBuildVersion} from 'expo-application'
@@ -14,6 +42,10 @@ import {logger} from '#/logger'
 import {isIOS} from '#/platform/detection'
 import {IS_TESTFLIGHT} from '#/env'
 
+/**
+ * 最小バックグラウンド時間（15分）
+ * この時間以上バックグラウンドにいた場合、復帰時に更新チェック
+ */
 const MINIMUM_MINIMIZE_TIME = 15 * 60e3
 
 async function setExtraParams() {

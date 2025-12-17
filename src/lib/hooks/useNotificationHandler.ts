@@ -1,3 +1,38 @@
+/**
+ * プッシュ通知ハンドラーモジュール
+ *
+ * 【概要】
+ * プッシュ通知（iOS APNs、Android FCM）の受信と処理を管理。
+ * 通知タップ時のナビゲーション、アカウント切り替え、キャッシュ無効化を統合。
+ *
+ * 【対応通知タイプ】
+ * - like: いいね通知
+ * - repost: リポスト通知
+ * - follow: フォロー通知
+ * - mention: メンション通知
+ * - reply: リプライ通知
+ * - quote: 引用通知
+ * - chat-message: DMメッセージ通知
+ * - starterpack-joined: スターターパック参加通知
+ * - verified/unverified: 認証ステータス変更
+ *
+ * 【処理フロー】
+ * 1. 通知受信 → ペイロード解析
+ * 2. 対象アカウント確認（マルチアカウント対応）
+ * 3. 必要に応じてアカウント切り替え
+ * 4. 適切な画面へナビゲーション
+ * 5. 通知キャッシュ無効化
+ *
+ * 【Android固有】
+ * - 通知チャンネルによるサウンド制御
+ * - Android 8.0+の通知チャンネル必須対応
+ *
+ * 【Goユーザー向け補足】
+ * - Notifications.addNotificationResponseReceivedListener: 通知タップのコールバック登録
+ *   Goのhttp.HandleFuncに相当するイベントハンドラー登録
+ * - useEffect内のreturn: クリーンアップ関数（Goのdefer相当）
+ * - AppState: アプリのライフサイクル状態（フォアグラウンド/バックグラウンド）
+ */
 import {useEffect} from 'react'
 import * as Notifications from 'expo-notifications'
 import {AtUri} from '@atproto/api'
@@ -20,6 +55,10 @@ import {useCloseAllActiveElements} from '#/state/util'
 import {resetToTab} from '#/Navigation'
 import {router} from '#/routes'
 
+/**
+ * プッシュ通知の理由（タイプ）
+ * サーバーから送信される通知種別を定義
+ */
 export type NotificationReason =
   | 'like'
   | 'repost'

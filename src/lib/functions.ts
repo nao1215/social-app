@@ -1,3 +1,31 @@
+/**
+ * 汎用ユーティリティ関数モジュール
+ *
+ * 【概要】
+ * 配列操作、オブジェクト比較、選択ユーティリティなどの汎用関数を提供。
+ *
+ * 【主な機能】
+ * - choose: キーに基づく値の選択
+ * - dedupArray: 配列の重複排除
+ * - replaceEqualDeep: 構造的共有による深い等価比較
+ * - isPlainObject/isPlainArray: オブジェクト/配列の判定
+ *
+ * 【Goユーザー向け補足】
+ * - Set: Goのmap[T]struct{}に相当
+ * - ジェネリクス<T>: Goのtype parametersに相当
+ * - Record<K, V>: Goのmap[K]Vに相当
+ */
+
+/**
+ * キーに対応する値を選択する
+ *
+ * 【使用例】
+ * choose('a', {a: 1, b: 2, c: 3}) // → 1
+ *
+ * @param value キー
+ * @param choices 選択肢オブジェクト
+ * @returns キーに対応する値
+ */
 export function choose<U, T extends Record<string, U>>(
   value: keyof T,
   choices: T,
@@ -5,6 +33,15 @@ export function choose<U, T extends Record<string, U>>(
   return choices[value]
 }
 
+/**
+ * 配列から重複要素を除去
+ *
+ * 【使用例】
+ * dedupArray([1, 2, 2, 3, 3, 3]) // → [1, 2, 3]
+ *
+ * @param arr 重複を含む可能性のある配列
+ * @returns 重複が除去された配列
+ */
 export function dedupArray<T>(arr: T[]): T[] {
   const s = new Set(arr)
   return [...s]
@@ -62,11 +99,32 @@ export function replaceEqualDeep(a: any, b: any): any {
   return b
 }
 
+/**
+ * 値がプレーンな配列かを判定
+ *
+ * 【判定基準】
+ * - Array.isArrayでtrueを返す
+ * - 配列のインデックス以外のプロパティがない
+ *
+ * @param value 判定対象
+ * @returns プレーン配列ならtrue
+ */
 export function isPlainArray(value: unknown) {
   return Array.isArray(value) && value.length === Object.keys(value).length
 }
 
-// Copied from: https://github.com/jonschlinkert/is-plain-object
+/**
+ * 値がプレーンオブジェクトかを判定
+ *
+ * 【判定基準】
+ * - Object.prototype.toString()が'[object Object]'を返す
+ * - コンストラクタが未定義、またはObject
+ * - クラスインスタンスやカスタムオブジェクトは除外
+ *
+ * @see https://github.com/jonschlinkert/is-plain-object
+ * @param o 判定対象
+ * @returns プレーンオブジェクトならtrue
+ */
 export function isPlainObject(o: any): o is Object {
   if (!hasObjectPrototype(o)) {
     return false

@@ -1,9 +1,39 @@
+/**
+ * アプリケーション定数モジュール
+ *
+ * 【概要】
+ * Blueskyアプリ全体で使用される定数を一元管理。
+ * サービスURL、制限値、フィード設定、API設定などを定義。
+ *
+ * 【定数の種類】
+ * - サービスURL: Bluesky API、GIF、動画などのエンドポイント
+ * - 制限値: 文字数制限、画像サイズ制限など
+ * - フィード設定: デフォルトフィード、推奨フィード
+ * - DID: 分散型識別子（Blueskyの公式アカウント等）
+ * - Proxyヘッダー: atproto-proxy用の設定
+ *
+ * 【AT Protocol用語】
+ * - DID: Decentralized Identifier（分散型識別子）
+ * - AT URI: at://did/collection/rkey 形式のリソース識別子
+ * - Labeler: コンテンツにラベル（警告等）を付与するサービス
+ *
+ * 【Goユーザー向け補足】
+ * - const: Goのconstと同様だが、オブジェクトも定義可能
+ * - as const: 配列/オブジェクトをリテラル型として固定
+ *   Goでは型定義で同様のことを行う
+ * - Record<K, V>: Goのmap[K]Vに相当
+ */
 import {type Insets, Platform} from 'react-native'
 import {type AppBskyActorDefs, BSKY_LABELER_DID} from '@atproto/api'
 
 import {type ProxyHeaderValue} from '#/state/session/agent'
 import {BLUESKY_PROXY_DID, CHAT_PROXY_DID} from '#/env'
 
+// =============================================================================
+// サービスURL定義
+// =============================================================================
+
+/** ローカル開発用サービスURL（Android: 10.0.2.2、他: localhost） */
 export const LOCAL_DEV_SERVICE =
   Platform.OS === 'android' ? 'http://10.0.2.2:2583' : 'http://localhost:2583'
 export const STAGING_SERVICE = 'https://staging.bsky.dev'

@@ -1,12 +1,47 @@
+/**
+ * デモフィードデータモジュール
+ *
+ * 【概要】
+ * ログイン前の画面やマーケティング用にダミーの投稿データを提供。
+ * リアルなBlueskyフィードの見た目を再現するためのモックデータ。
+ *
+ * 【使用場面】
+ * - PWI（Public Web Interface）のログイン前画面
+ * - スクリーンショット撮影
+ * - UIデモンストレーション
+ *
+ * 【データ構造】
+ * - AT Protocol準拠のフィード形式
+ * - 3件のサンプル投稿（画像付き・テキストのみ）
+ * - 認証済みユーザー情報を含む
+ *
+ * 【Goユーザー向け補足】
+ * - satisfies: TypeScriptの型チェック演算子
+ *   値が特定の型を満たすことを確認（型の絞り込みには使わない）
+ * - subMinutes/subDays: date-fnsライブラリの日時計算
+ *   Goのtime.Add(-duration)に相当
+ */
 import {type AppBskyFeedGetFeed} from '@atproto/api'
 import {subDays, subMinutes} from 'date-fns'
 
+/** Bluesky公式アカウントのDID */
 const DID = `did:plc:z72i7hdynmk6r22z27h6tvur`
+
+/** 現在時刻（デモデータの基準） */
 const NOW = new Date()
+
+/** 各投稿の作成日時（現在から数分前） */
 const POST_1_DATE = subMinutes(NOW, 2).toISOString()
 const POST_2_DATE = subMinutes(NOW, 4).toISOString()
 const POST_3_DATE = subMinutes(NOW, 5).toISOString()
 
+/**
+ * デモ用フィードデータ
+ *
+ * 【投稿1】バンドのライブ告知（画像付き、認証済み）
+ * 【投稿2】インテリアデザイン紹介（画像付き）
+ * 【投稿3】木工作品の紹介（テキストのみ）
+ */
 export const DEMO_FEED = {
   feed: [
     {
@@ -199,4 +234,5 @@ export const DEMO_FEED = {
   ],
 } satisfies AppBskyFeedGetFeed.OutputSchema
 
+/** ボトムバー用のデモユーザーアバター画像URL */
 export const BOTTOM_BAR_AVI = 'https://bsky.social/about/adi/user_avi.jpg'

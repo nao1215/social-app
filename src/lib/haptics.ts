@@ -1,5 +1,25 @@
-// React の基本フック類をインポート
-// Import basic React hooks
+/**
+ * ハプティクス（触覚フィードバック）制御モジュール
+ *
+ * 【概要】
+ * ボタンタップ等の操作に対する触覚フィードバックを管理。
+ * ユーザーの設定に応じて有効/無効を切り替え可能。
+ *
+ * 【プラットフォーム別動作】
+ * - iOS: Light/Medium/Heavyの3段階の強度をサポート
+ * - Android: 常にLightを使用（ユーザーからの要望により）
+ * - Web: ハプティクスなし
+ *
+ * 【expo-hapticsライブラリ】
+ * - impactAsync: 衝撃系の触覚フィードバック
+ * - ImpactFeedbackStyle: フィードバック強度の列挙型
+ *
+ * 【Goユーザー向け補足】
+ * - useCallback: 関数のメモ化（参照の安定化）
+ *   Goでは変数のキャプチャを伴うクロージャに相当
+ * - Device.isDevice: 実機かシミュレータかを判定
+ *   Goのビルドタグによる条件分岐に類似
+ */
 import React from 'react'
 // Expo のデバイス情報検出ライブラリをインポート
 // Import Expo device information detection library

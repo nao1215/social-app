@@ -1,12 +1,48 @@
+/**
+ * エラーメッセージクリーニングフック
+ *
+ * 【概要】
+ * 技術的なエラーメッセージをユーザーフレンドリーな表現に変換。
+ * ネットワークエラー、サーバーエラー、認証エラーなどを検出して適切なメッセージを返す。
+ *
+ * 【変換例】
+ * - "Network request failed" → "インターネット接続を確認してください"
+ * - "Upstream Failure" → "サーバーに問題が発生しています"
+ * - "Rate Limit Exceeded" → "リクエスト制限に達しました"
+ * - "Bad token scope" → "アプリパスワードでは利用できません"
+ *
+ * 【戻り値の構造】
+ * - raw: 元のエラーメッセージ（デバッグ用）
+ * - clean: ユーザー向けのクリーンなメッセージ（該当なしならundefined）
+ *
+ * 【Goユーザー向け補足】
+ * - useCallback: 関数のメモ化（Goには直接対応なし）
+ * - error.toString(): Goのerror.Error()に相当
+ * - String.includes(): Goのstrings.Contains()に相当
+ */
 import {useCallback} from 'react'
 import {msg} from '@lingui/macro'
 import {useLingui} from '@lingui/react'
 
+/**
+ * クリーニング済みエラーの型
+ * rawは元のメッセージ、cleanはユーザー向けメッセージ
+ */
 type CleanedError = {
   raw: string | undefined
   clean: string | undefined
 }
 
+/**
+ * エラーメッセージをユーザーフレンドリーに変換するフック
+ *
+ * 【使用例】
+ * const cleanError = useCleanError()
+ * const {raw, clean} = cleanError(error)
+ * if (clean) showToast(clean)
+ *
+ * @returns エラー変換関数
+ */
 export function useCleanError() {
   const {_} = useLingui()
 
@@ -73,13 +109,28 @@ export function useCleanError() {
   )
 }
 
+/**
+ * ネットワークエラーを示す文字列パターン
+ * これらが含まれる場合、接続問題と判定
+ */
 const NETWORK_ERRORS = [
-  'Abort',
-  'Network request failed',
-  'Failed to fetch',
-  'Load failed',
+  'Abort',             // リクエスト中断
+  'Network request failed',  // React Native標準のネットワークエラー
+  'Failed to fetch',   // fetch API標準のエラー
+  'Load failed',       // 読み込み失敗
 ]
 
+/**
+ * ネットワークエラーかどうかを判定
+ *
+ * 【使用例】
+ * if (isNetworkError(error)) {
+ *   showOfflineMessage()
+ * }
+ *
+ * @param e 判定対象のエラー
+ * @returns ネットワークエラーならtrue
+ */
 export function isNetworkError(e: unknown) {
   const str = String(e)
   for (const err of NETWORK_ERRORS) {

@@ -1,3 +1,30 @@
+/**
+ * プッシュ通知管理モジュール
+ *
+ * 【概要】
+ * iOS/Androidのプッシュ通知（APNs/FCM）をBlueskyサーバーに登録・管理。
+ * デバイストークンの取得、サーバー登録、権限要求、バッジカウント管理を統合。
+ *
+ * 【処理フロー】
+ * 1. ユーザーログイン後、通知権限を確認/要求
+ * 2. デバイストークンを取得（APNs/FCM）
+ * 3. トークンをBlueskyサーバーに登録
+ * 4. トークン変更時の自動再登録をリスナーで監視
+ *
+ * 【年齢制限対応】
+ * - 年齢確認状態（isAgeRestricted）をサーバーに送信
+ * - 制限されたユーザーには特定の通知が送られない
+ *
+ * 【デバウンス処理】
+ * - registerPushTokenは100ms間隔でデバウンス
+ * - expo-notificationsのバグ対策（複数呼び出し防止）
+ *
+ * 【Goユーザー向け補足】
+ * - Notifications.addPushTokenListener: イベントリスナー登録
+ *   Goのchannel受信とgoroutineに相当
+ * - debounce: 連続呼び出しを間引く（Goのtime.AfterFuncで実装可能）
+ * - useCallback: 関数のメモ化（Goには直接対応なし）
+ */
 import {useCallback, useEffect} from 'react'
 import {Platform} from 'react-native'
 import * as Notifications from 'expo-notifications'
@@ -269,6 +296,16 @@ export function useRequestNotificationsPermission() {
   }
 }
 
+/**
+ * アプリバッジカウントを減少させる
+ *
+ * 【動作】
+ * - 現在のバッジカウントを取得
+ * - 指定数を減算（負の値にはならない）
+ * - ネイティブハンドラーとexpo-notificationsの両方を更新
+ *
+ * @param by 減少させる数
+ */
 export async function decrementBadgeCount(by: number) {
   if (!isNative) return
 
@@ -278,10 +315,19 @@ export async function decrementBadgeCount(by: number) {
     count = 0
   }
 
+  // 両方のハンドラーを更新（同期のため）
   await BackgroundNotificationHandler.setBadgeCountAsync(count)
   await setBadgeCountAsync(count)
 }
 
+/**
+ * アプリバッジカウントをリセット（0に設定）
+ *
+ * 【使用場面】
+ * - 全通知を既読にした時
+ * - ログアウト時
+ * - 通知画面を開いた時
+ */
 export async function resetBadgeCount() {
   await BackgroundNotificationHandler.setBadgeCountAsync(0)
   await setBadgeCountAsync(0)

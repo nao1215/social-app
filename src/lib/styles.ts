@@ -1,10 +1,39 @@
-// React Nativeのスタイル関連のユーティリティとタイプ定義をインポート
-// Imports React Native style utilities and type definitions
+/**
+ * スタイル定義モジュール
+ *
+ * 【概要】
+ * アプリ全体で再利用される基本スタイルを定義。
+ * 色、フォント、マージン、パディング、フレックスレイアウト等のユーティリティ。
+ *
+ * 【注意】
+ * このファイルの多くは @deprecated（非推奨）です。
+ * 新しいコードでは ALF（src/alf/）のatomsを使用してください。
+ *
+ * 【主な内容】
+ * - colors: カラーパレット（gray, blue, red, green等）
+ * - gradients: グラデーション定義
+ * - s: 再利用可能なスタイルオブジェクト（マージン、パディング等）
+ * - lh(): 行の高さ計算ユーティリティ
+ * - addStyle(): スタイル追加ユーティリティ
+ *
+ * 【スタイル命名規則】
+ * - m: margin（mt=marginTop, mr=marginRight等）
+ * - p: padding（pt=paddingTop, pr=paddingRight等）
+ * - f: fontSize（f12=fontSize 12）
+ * - fw: fontWeight
+ * - flex: flexboxレイアウト
+ *
+ * 【Goユーザー向け補足】
+ * - StyleSheet.create: スタイル定義の最適化
+ *   Goの構造体リテラルに相当
+ * - Dimensions.get('window'): 画面サイズ取得
+ *   GoのOSパッケージによる環境情報取得に類似
+ */
 import {
-  Dimensions, // デバイスの画面サイズ情報を取得するAPI / API to get device screen dimensions
-  type StyleProp, // スタイルプロパティの型定義 / Type definition for style properties
-  StyleSheet, // スタイルシートを作成するためのAPI / API for creating stylesheets
-  type TextStyle, // テキストスタイルの型定義 / Type definition for text styles
+  Dimensions,
+  type StyleProp,
+  StyleSheet,
+  type TextStyle,
 } from 'react-native'
 
 // プラットフォーム検出ユーティリティをインポート

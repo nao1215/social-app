@@ -1,3 +1,26 @@
+/**
+ * パレットスタイル取得フック（非推奨）
+ *
+ * 【概要】
+ * テーマカラーパレットからスタイルオブジェクトを生成。
+ * レガシーコードで使用されている旧スタイルシステム。
+ *
+ * 【注意】
+ * このフックは非推奨（@deprecated）。
+ * 新しいコードでは`#/alf`のuseThemeを使用すること。
+ *
+ * 【提供スタイル】
+ * - view/viewLight: コンテナの背景色
+ * - btn: ボタンの背景色
+ * - border/borderDark: ボーダー色
+ * - text/textLight/textInverted: テキスト色
+ * - link: リンク色
+ * - icon: アイコン色
+ *
+ * 【Goユーザー向け補足】
+ * - useMemo: 計算結果のキャッシュ（Goのsync.Onceに類似）
+ * - @deprecated: Goのdeprecated: コメントに相当
+ */
 import {useMemo} from 'react'
 import {type TextStyle, type ViewStyle} from 'react-native'
 
@@ -7,22 +30,30 @@ import {
   useTheme,
 } from '../ThemeContext'
 
+/**
+ * usePaletteの戻り値の型定義
+ * 各種スタイルオブジェクトを含む
+ */
 export interface UsePaletteValue {
-  colors: PaletteColor
-  view: ViewStyle
-  viewLight: ViewStyle
-  btn: ViewStyle
-  border: ViewStyle
-  borderDark: ViewStyle
-  text: TextStyle
-  textLight: TextStyle
-  textInverted: TextStyle
-  link: TextStyle
-  icon: TextStyle
+  colors: PaletteColor       // 元のカラー値
+  view: ViewStyle            // コンテナ背景
+  viewLight: ViewStyle       // 明るい背景
+  btn: ViewStyle             // ボタン背景
+  border: ViewStyle          // 通常ボーダー
+  borderDark: ViewStyle      // 濃いボーダー
+  text: TextStyle            // 通常テキスト
+  textLight: TextStyle       // 薄いテキスト
+  textInverted: TextStyle    // 反転テキスト
+  link: TextStyle            // リンクテキスト
+  icon: TextStyle            // アイコン色
 }
 
 /**
- * @deprecated use `useTheme` from `#/alf`
+ * テーマパレットからスタイルを取得するフック
+ *
+ * @deprecated `#/alf`のuseThemeを使用してください
+ * @param color パレット名（'default', 'primary'など）
+ * @returns スタイルオブジェクトのコレクション
  */
 export function usePalette(color: PaletteColorName): UsePaletteValue {
   const theme = useTheme()
