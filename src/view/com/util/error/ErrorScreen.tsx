@@ -1,18 +1,90 @@
+/**
+ * エラースクリーンコンポーネント
+ * Error Screen Component
+ *
+ * 【概要】
+ * 重大なエラー発生時に表示するフルスクリーンエラー画面。
+ * タイトル、メッセージ、詳細情報、リトライボタンを含む。
+ *
+ * 【使用場面】
+ * - ページ読み込み失敗
+ * - 認証エラー
+ * - 重大なAPIエラー
+ * - ネットワーク接続不可
+ *
+ * 【レイアウト】
+ * ┌─────────────────────┐
+ * │ [ヘッダー（オプション）]  │
+ * │                     │
+ * │       (!)           │
+ * │      タイトル        │
+ * │     メッセージ       │
+ * │    ┌──詳細情報──┐   │
+ * │    │  エラー詳細  │   │
+ * │    └───────────┘   │
+ * │   [再試行ボタン]     │
+ * └─────────────────────┘
+ *
+ * 【Goユーザー向け補足】
+ * - Trans: コンパイル時に翻訳処理されるコンポーネント（Goのi18nパッケージに相当）
+ * - Layout.Center: 中央揃えレイアウト
+ * - Layout.Header.*: Compound Componentパターンによるヘッダー構築
+ */
+
+// React Nativeの基本コンポーネント
+// React Native basic component
 import {View} from 'react-native'
+
+// FontAwesomeアイコンコンポーネント
+// FontAwesome icon component
 import {
   FontAwesomeIcon,
   FontAwesomeIconStyle,
 } from '@fortawesome/react-native-fontawesome'
+
+// 国際化マクロとコンポーネント
+// Internationalization macro and component
 import {msg, Trans} from '@lingui/macro'
+
+// 国際化フック
+// Internationalization hook
 import {useLingui} from '@lingui/react'
 
+// テーマカラー取得フック
+// Theme color hook
 import {usePalette} from '#/lib/hooks/usePalette'
+
+// デザインシステム
+// Design system
 import {atoms as a, useTheme} from '#/alf'
+
+// ボタンコンポーネント
+// Button components
 import {Button, ButtonIcon, ButtonText} from '#/components/Button'
+
+// リトライアイコン
+// Retry icon
 import {ArrowRotateCounterClockwise_Stroke2_Corner0_Rounded as ArrowRotateCounterClockwiseIcon} from '#/components/icons/ArrowRotateCounterClockwise'
+
+// レイアウトコンポーネント
+// Layout components
 import * as Layout from '#/components/Layout'
+
+// テキストコンポーネント
+// Text component
 import {Text} from '#/components/Typography'
 
+/**
+ * エラースクリーンコンポーネント
+ * Error Screen Component
+ *
+ * @param title エラータイトル / Error title
+ * @param message エラーメッセージ / Error message
+ * @param details 詳細情報（オプション） / Detail information (optional)
+ * @param onPressTryAgain リトライコールバック / Retry callback
+ * @param testID テストID / Test ID
+ * @param showHeader ヘッダー表示フラグ / Show header flag
+ */
 export function ErrorScreen({
   title,
   message,

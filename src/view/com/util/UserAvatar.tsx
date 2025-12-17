@@ -1,4 +1,32 @@
+/**
+ * ユーザーアバターコンポーネント
+ * User Avatar Component
+ *
+ * 【概要】
+ * ユーザー、リスト、アルゴリズム、ラベラーのアバター画像を表示するコンポーネント。
+ * 表示専用、編集可能、プレビュー可能の3つのバリエーションを提供。
+ *
+ * 【主な機能】
+ * - 各種タイプのアバター表示（ユーザー、リスト、アルゴ、ラベラー）
+ * - デフォルトアバター（SVG）
+ * - モデレーションによるぼかし表示
+ * - ライブ配信中インジケーター表示
+ * - プロフィールホバーカード連携
+ * - 画像編集機能（カメラ/ライブラリ選択）
+ *
+ * 【Goユーザー向け補足】
+ * - memo: コンポーネントのメモ化（props変更時のみ再レンダリング）
+ * - useMemo: 計算結果のメモ化（依存配列の値変更時のみ再計算）
+ * - useCallback: 関数のメモ化（依存配列の値変更時のみ再生成）
+ * - SVG: ベクター画像形式（React Native SVGライブラリで描画）
+ */
+
+// Reactコア（memo、フック）
+// React core (memo, hooks)
 import React, {memo, useCallback, useMemo, useState} from 'react'
+
+// React Nativeの基本コンポーネント
+// React Native basic components
 import {
   Image,
   Pressable,
@@ -7,52 +35,153 @@ import {
   View,
   type ViewStyle,
 } from 'react-native'
+
+// React Native SVG（ベクター画像描画）
+// React Native SVG (vector image rendering)
 import Svg, {Circle, Path, Rect} from 'react-native-svg'
+
+// AT Protocol APIのモデレーションUI型
+// AT Protocol API moderation UI type
 import {type ModerationUI} from '@atproto/api'
+
+// FontAwesomeアイコン
+// FontAwesome icons
 import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome'
+
+// 国際化マクロ
+// Internationalization macro
 import {msg, Trans} from '@lingui/macro'
+
+// 国際化フック
+// Internationalization hook
 import {useLingui} from '@lingui/react'
+
+// React Queryクライアント（キャッシュ操作）
+// React Query client (cache operations)
 import {useQueryClient} from '@tanstack/react-query'
 
+// アクター（ユーザー）ステータスフック
+// Actor (user) status hook
 import {useActorStatus} from '#/lib/actor-status'
+
+// タッチデバイス検出
+// Touch device detection
 import {isTouchDevice} from '#/lib/browser'
+
+// ハプティクス（触覚フィードバック）フック
+// Haptics (tactile feedback) hook
 import {useHaptics} from '#/lib/haptics'
+
+// カメラ/フォトライブラリ権限フック
+// Camera/photo library permission hooks
 import {
   useCameraPermission,
   usePhotoLibraryPermission,
 } from '#/lib/hooks/usePermissions'
+
+// 画像圧縮ユーティリティ
+// Image compression utility
 import {compressIfNeeded} from '#/lib/media/manip'
+
+// 画像ピッカー関数
+// Image picker functions
 import {openCamera, openCropper, openPicker} from '#/lib/media/picker'
+
+// 選択された画像の型
+// Selected image type
 import {type PickerImage} from '#/lib/media/picker.shared'
+
+// プロフィールリンク生成
+// Profile link generation
 import {makeProfileLink} from '#/lib/routes/links'
+
+// 表示名サニタイズ
+// Display name sanitization
 import {sanitizeDisplayName} from '#/lib/strings/display-names'
+
+// ハンドルサニタイズ
+// Handle sanitization
 import {sanitizeHandle} from '#/lib/strings/handles'
+
+// ロガー
+// Logger
 import {logger} from '#/logger'
+
+// プラットフォーム検出
+// Platform detection
 import {isAndroid, isNative, isWeb} from '#/platform/detection'
+
+// コンポーザー用画像型と関数
+// Composer image type and functions
 import {
   type ComposerImage,
   compressImage,
   createComposerImage,
 } from '#/state/gallery'
+
+// プロフィールビューキャッシュ
+// Profile view cache
 import {unstableCacheProfileView} from '#/state/queries/unstable-profile-cache'
+
+// 画像編集ダイアログ
+// Image edit dialog
 import {EditImageDialog} from '#/view/com/composer/photos/EditImageDialog'
+
+// 高優先度画像コンポーネント
+// High priority image component
 import {HighPriorityImage} from '#/view/com/util/images/Image'
+
+// デザインシステム
+// Design system
 import {atoms as a, tokens, useTheme} from '#/alf'
+
+// ボタンコンポーネント
+// Button component
 import {Button} from '#/components/Button'
+
+// ダイアログ制御フック
+// Dialog control hook
 import {useDialogControl} from '#/components/Dialog'
+
+// シートラッパー
+// Sheet wrapper
 import {useSheetWrapper} from '#/components/Dialog/sheet-wrapper'
+
+// アイコンコンポーネント
+// Icon components
 import {
   Camera_Filled_Stroke2_Corner0_Rounded as CameraFilledIcon,
   Camera_Stroke2_Corner0_Rounded as CameraIcon,
 } from '#/components/icons/Camera'
 import {StreamingLive_Stroke2_Corner0_Rounded as LibraryIcon} from '#/components/icons/StreamingLive'
 import {Trash_Stroke2_Corner0_Rounded as TrashIcon} from '#/components/icons/Trash'
+
+// リンクコンポーネント
+// Link component
 import {Link} from '#/components/Link'
+
+// ライブインジケーター
+// Live indicator
 import {LiveIndicator} from '#/components/live/LiveIndicator'
+
+// ライブステータスダイアログ
+// Live status dialog
 import {LiveStatusDialog} from '#/components/live/LiveStatusDialog'
+
+// メディアインセットボーダー（画像の内側ボーダー）
+// Media inset border (inner border for images)
 import {MediaInsetBorder} from '#/components/MediaInsetBorder'
+
+// メニューコンポーネント
+// Menu components
 import * as Menu from '#/components/Menu'
+
+// プロフィールホバーカード
+// Profile hover card
 import {ProfileHoverCard} from '#/components/ProfileHoverCard'
+
+// Bluesky型定義
+// Bluesky type definitions
 import type * as bsky from '#/types/bsky'
 
 export type UserAvatarType = 'user' | 'algo' | 'list' | 'labeler'

@@ -1,4 +1,39 @@
+/**
+ * ビューセレクターコンポーネント
+ * View Selector Component
+ *
+ * 【概要】
+ * タブ付きのリストビューを提供するコンポーネント。
+ * ヘッダー、セレクター（タブ）、コンテンツリストを統合表示。
+ *
+ * 【構造】
+ * ┌─────────────────────┐
+ * │    [ヘッダー]        │ ← 任意
+ * ├─────────────────────┤
+ * │ [タブ1] [タブ2] ...  │ ← スティッキーヘッダー
+ * ├─────────────────────┤
+ * │    コンテンツ        │
+ * │    リスト           │
+ * └─────────────────────┘
+ *
+ * 【機能】
+ * - タブ切り替え
+ * - プルツーリフレッシュ
+ * - 無限スクロール（onEndReached）
+ * - スティッキーヘッダー（Androidでは無効）
+ *
+ * 【Goユーザー向け補足】
+ * - forwardRef: 親コンポーネントからrefを受け取る（Goのポインタ渡しに相当）
+ * - useImperativeHandle: ref経由で公開するメソッドを定義
+ * - stickyHeaderIndices: スクロール時に固定するアイテムのインデックス
+ */
+
+// Reactフック
+// React hooks
 import React, {useEffect, useState} from 'react'
+
+// React Nativeの基本コンポーネント
+// React Native basic components
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -9,22 +44,59 @@ import {
   View,
 } from 'react-native'
 
+// カラースキームスタイルフック
+// Color scheme style hook
 import {useColorSchemeStyle} from '#/lib/hooks/useColorSchemeStyle'
+
+// テーマカラー取得フック
+// Theme color hook
 import {usePalette} from '#/lib/hooks/usePalette'
+
+// 数値クランプユーティリティ
+// Number clamp utility
 import {clamp} from '#/lib/numbers'
+
+// 共通スタイルとカラー
+// Common styles and colors
 import {colors, s} from '#/lib/styles'
+
+// プラットフォーム検出
+// Platform detection
 import {isAndroid} from '#/platform/detection'
+
+// テキストコンポーネント
+// Text component
 import {Text} from './text/Text'
+
+// 内部用FlatList
+// Internal FlatList
 import {FlatList_INTERNAL} from './Views'
 
+// ヘッダーアイテム識別子
+// Header item identifier
 const HEADER_ITEM = {_reactKey: '__header__'}
+
+// セレクターアイテム識別子
+// Selector item identifier
 const SELECTOR_ITEM = {_reactKey: '__selector__'}
+
+// スティッキーヘッダーのインデックス（セレクターを固定）
+// Sticky header indices (fixes selector)
 const STICKY_HEADER_INDICES = [1]
 
+/**
+ * ViewSelectorのref経由で公開するメソッド
+ * Methods exposed via ViewSelector ref
+ */
 export type ViewSelectorHandle = {
+  /** トップにスクロール / Scroll to top */
   scrollToTop: () => void
 }
 
+/**
+ * ビューセレクターコンポーネント
+ * View Selector Component
+ */
 export const ViewSelector = React.forwardRef<
   ViewSelectorHandle,
   {

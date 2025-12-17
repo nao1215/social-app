@@ -1,13 +1,62 @@
+/**
+ * 画像レイアウトグリッドコンポーネント
+ * Image Layout Grid Component
+ *
+ * 【概要】
+ * 投稿内の複数画像をグリッドレイアウトで表示するコンポーネント。
+ * 画像数に応じて自動的にレイアウトを変更。
+ *
+ * 【レイアウトパターン】
+ * 2枚: [1][2] 横並び（各1:1）
+ *
+ * 3枚: [1][2] 左1枚大、右2枚縦並び
+ *      [ ][3]
+ *
+ * 4枚: [1][2] 2x2グリッド
+ *      [3][4]
+ *
+ * 【Goユーザー向け補足】
+ * - useAnimatedRef: アニメーション用ref（共有要素トランジション）
+ * - noCorners: 角丸を無効にするヘルパー（隣接画像の境界）
+ * - StyleSheet.flatten: 複数スタイルをマージする関数
+ */
+
+// React本体
+// React core
 import React from 'react'
+
+// React Nativeの基本コンポーネントと型
+// React Native basic components and types
 import {type StyleProp, StyleSheet, View, type ViewStyle} from 'react-native'
+
+// React Native Reanimated（アニメーション用ref）
+// React Native Reanimated (for animation ref)
 import {type AnimatedRef, useAnimatedRef} from 'react-native-reanimated'
+
+// AT Protocol API型定義（画像埋め込み）
+// AT Protocol API type (image embed)
 import {type AppBskyEmbedImages} from '@atproto/api'
 
+// デザインシステム
+// Design system
 import {atoms as a, useBreakpoints} from '#/alf'
+
+// 投稿埋め込み表示コンテキスト型
+// Post embed view context type
 import {PostEmbedViewContext} from '#/components/Post/Embed/types'
+
+// 画像サイズ型
+// Image dimensions type
 import {type Dimensions} from '../../lightbox/ImageViewing/@types'
+
+// ギャラリーアイテムコンポーネント
+// Gallery item component
 import {GalleryItem} from './Gallery'
 
+/**
+ * 画像レイアウトグリッドのProps型
+ * Image Layout Grid Props type
+ */
 interface ImageLayoutGridProps {
   images: AppBskyEmbedImages.ViewImage[]
   onPress?: (

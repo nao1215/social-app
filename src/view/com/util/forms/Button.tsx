@@ -1,4 +1,35 @@
+/**
+ * ボタンコンポーネント（レガシー）
+ * Button Component (Legacy)
+ *
+ * 【概要】
+ * 汎用ボタンコンポーネント。複数のスタイルバリアント、
+ * ローディング状態、無効状態をサポート。
+ *
+ * 【注意】
+ * このコンポーネントは非推奨。新規コードでは `#/components/Button.tsx` を使用。
+ *
+ * 【ボタンタイプ】
+ * - primary: プライマリカラー（主要アクション）
+ * - secondary: セカンダリカラー（副次アクション）
+ * - default: デフォルトスタイル
+ * - inverted: 反転カラー
+ * - *-outline: 枠線のみ
+ * - *-light: 軽いスタイル
+ *
+ * 【Goユーザー向け補足】
+ * - ActivityIndicator: ローディングスピナー（Goでいうプログレスバー表示）
+ * - Pressable: タッチ可能な基本コンポーネント
+ * - PressableStateCallbackType: 押下/ホバー状態の型
+ * - choose: 型安全なswitch-case代替関数
+ */
+
+// React本体
+// React core
 import React from 'react'
+
+// React Nativeの基本コンポーネントと型
+// React Native basic components and types
 import {
   ActivityIndicator,
   type GestureResponderEvent,
@@ -13,10 +44,22 @@ import {
   type ViewStyle,
 } from 'react-native'
 
+// 型安全な選択関数
+// Type-safe selection function
 import {choose} from '#/lib/functions'
+
+// テーマフック
+// Theme hook
 import {useTheme} from '#/lib/ThemeContext'
+
+// テキストコンポーネント
+// Text component
 import {Text} from '../text/Text'
 
+/**
+ * ボタンタイプの定義
+ * Button type definitions
+ */
 export type ButtonType =
   | 'primary'
   | 'secondary'

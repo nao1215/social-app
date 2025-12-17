@@ -1,4 +1,27 @@
 /**
+ * ビューコンポーネント（Web版）
+ * View Components (Web Version)
+ *
+ * 【概要】
+ * Web版では、モバイル体験（単一の狭いカラム）を再現するため、
+ * すべてのコンテンツを中央揃えにする。デスクトップではUIシェルで囲む。
+ *
+ * 【課題と解決策】
+ * スクロールは階層の深いコンポーネントで処理されるため、
+ * トップレベル要素にmax-widthをラップするだけでは不十分。
+ * 中央揃えはScrollViewレベルで行う必要がある。
+ *
+ * 【含まれるコンポーネント】
+ * - CenteredView: 中央揃えビュー（スクロールなし）
+ * - FlatList_INTERNAL: 内部用FlatList（中央揃え付き）
+ * - ScrollView: 中央揃えScrollView
+ *
+ * 【Goユーザー向け補足】
+ * - maxWidth: 600px = モバイルのカラム幅に相当
+ * - marginLeft/Right: 'auto' = CSSの中央揃えテクニック
+ * - contentContainerStyle: スクロールコンテンツのスタイル
+ * - stickyHeaderIndices: Web版では使用（ネイティブ版Androidでは無効）
+ *
  * In the Web build, we center all content so that it mirrors the
  * mobile experience (a single narrow column). We then place a UI
  * shell around the content if you're in desktop.
@@ -12,6 +35,8 @@
  * need to match layout but which aren't scrolled.
  */
 
+// React本体
+// React core
 import React from 'react'
 import {
   type FlatList,

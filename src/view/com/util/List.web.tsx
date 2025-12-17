@@ -1,18 +1,72 @@
+/**
+ * リストコンポーネント（Web版）
+ * List Component (Web Version)
+ *
+ * 【概要】
+ * Web版のリストコンポーネント。FlatListの代わりにDOM要素を使用。
+ * IntersectionObserverを活用した効率的なスクロール処理。
+ *
+ * 【機能】
+ * - 仮想化なしの全アイテムレンダリング（Web向け最適化）
+ * - IntersectionObserverによるonEndReached/onStartReached
+ * - onItemSeen: アイテムが一定時間表示された時のコールバック
+ * - ResizeObserverによるコンテンツサイズ変更検知
+ * - フルウィンドウスクロール or コンテナスクロールの切り替え
+ *
+ * 【Goユーザー向け補足】
+ * - IntersectionObserver: 要素の可視性を監視するWeb API
+ *   Goのtime.Tickerでポーリングする代わりのイベント駆動監視
+ * - ResizeObserver: 要素サイズ変更を監視するWeb API
+ * - startTransition: React 18の低優先度更新（Goのgoroutineに似た概念）
+ * - useImperativeHandle: ref経由で公開するメソッドを定義
+ *
+ * 【スクロール監視の仕組み】
+ * 1. Visibilityコンポーネントで特定位置の可視性を監視
+ * 2. aboveTheFoldDetector: 画面上部の可視性でisScrolledDownを判定
+ * 3. EdgeVisibility: リストの先頭/末尾到達を検知
+ */
+
+// Reactフック
+// React hooks
 import React, {isValidElement, memo, startTransition, useRef} from 'react'
+
+// React Nativeの基本コンポーネントと型
+// React Native basic components and types
 import {
   type FlatListProps,
   StyleSheet,
   View,
   type ViewProps,
 } from 'react-native'
+
+// Reanimatedのスクロールイベント型
+// Reanimated scroll event type
 import {type ReanimatedScrollEvent} from 'react-native-reanimated/lib/typescript/hook/commonTypes'
 
+// バッチ更新ユーティリティ
+// Batched updates utility
 import {batchedUpdates} from '#/lib/batchedUpdates'
+
+// 非リアクティブコールバックフック
+// Non-reactive callback hook
 import {useNonReactiveCallback} from '#/lib/hooks/useNonReactiveCallback'
+
+// スクロールハンドラコンテキスト
+// Scroll handlers context
 import {useScrollHandlers} from '#/lib/ScrollContext'
+
+// スタイル追加ユーティリティ
+// Style addition utility
 import {addStyle} from '#/lib/styles'
+
+// レイアウトコンポーネント
+// Layout components
 import * as Layout from '#/components/Layout'
 
+/**
+ * リストメソッド型（TODO: より良い型定義が必要）
+ * List methods type (TODO: Better types needed)
+ */
 export type ListMethods = any // TODO: Better types.
 export type ListProps<ItemT> = Omit<
   FlatListProps<ItemT>,

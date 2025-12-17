@@ -1,4 +1,40 @@
+/**
+ * ネイティブドロップダウンメニューコンポーネント（レガシー）
+ * Native Dropdown Menu Component (Legacy)
+ *
+ * 【概要】
+ * iOS/Androidのネイティブドロップダウンメニューを使用するコンポーネント。
+ * WebではRadix UIベースのカスタムドロップダウンを使用。
+ *
+ * 【注意】
+ * このファイルのコンポーネントは非推奨。新規コードでは `#/components/Menu.tsx` を使用。
+ *
+ * 【プラットフォーム別動作】
+ * - iOS: UIMenuによるネイティブコンテキストメニュー
+ * - Android: PopupMenuによるネイティブメニュー
+ * - Web: Radix UIによるアニメーション付きカスタムメニュー
+ *
+ * 【含まれるコンポーネント】
+ * - DropdownMenuRoot: メニューのルートコンテナ
+ * - DropdownMenuTrigger: メニューを開くトリガー
+ * - DropdownMenuContent: メニューコンテンツ
+ * - DropdownMenuItem: メニューアイテム
+ * - DropdownMenuItemTitle: アイテムタイトル
+ * - DropdownMenuItemIcon: アイテムアイコン
+ * - DropdownMenuSeparator: セパレーター
+ *
+ * 【Goユーザー向け補足】
+ * - zeego: React Native用のネイティブメニューライブラリ
+ * - Radix UI: Web用のアクセシブルなUIプリミティブ
+ * - Portal: DOMツリーの別の場所にレンダリング（Goには直接対応なし）
+ */
+
+// React本体
+// React core
 import React from 'react'
+
+// React Nativeの基本コンポーネント
+// React Native basic components
 import {
   Platform,
   Pressable,
@@ -6,19 +42,48 @@ import {
   View,
   type ViewStyle,
 } from 'react-native'
+
+// FontAwesomeアイコン型
+// FontAwesome icon type
 import {type IconProp} from '@fortawesome/fontawesome-svg-core'
+
+// FontAwesomeアイコンコンポーネント
+// FontAwesome icon component
 import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome'
+
+// ネイティブドロップダウンメニューライブラリ
+// Native dropdown menu library
 import * as DropdownMenu from 'zeego/dropdown-menu'
+
+// メニューアイテム共通Props型
+// Menu item common props type
 import {type MenuItemCommonProps} from 'zeego/lib/typescript/menu'
 
+// テーマカラー取得フック
+// Theme color hook
 import {usePalette} from '#/lib/hooks/usePalette'
+
+// テーマフック
+// Theme hook
 import {useTheme} from '#/lib/ThemeContext'
+
+// プラットフォーム検出
+// Platform detection
 import {isIOS} from '#/platform/detection'
+
+// ポータルコンポーネント
+// Portal component
 import {Portal} from '#/components/Portal'
 
+// =============================================
+// カスタムドロップダウンメニューコンポーネント群
 // Custom Dropdown Menu Components
-// ==
+// =============================================
+
 /**
+ * ドロップダウンメニューのルートコンテナ
+ * Dropdown Menu Root Container
+ *
  * @deprecated use Menu from `#/components/Menu.tsx` instead
  */
 export const DropdownMenuRoot = DropdownMenu.Root

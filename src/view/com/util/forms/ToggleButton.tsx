@@ -1,3 +1,25 @@
+/**
+ * トグルボタンコンポーネント（レガシー）
+ * Toggle Button Component (Legacy)
+ *
+ * 【概要】
+ * ON/OFF切り替え可能なトグルスイッチボタン。
+ * iOS/Androidのスイッチコントロールに相当。
+ *
+ * 【注意】
+ * このコンポーネントは非推奨。新規コードでは `#/components/form/Toggle.tsx` を使用。
+ *
+ * 【見た目】
+ * [ (●)      ] ラベル  ← 非選択状態
+ * [      (●) ] ラベル  ← 選択状態（丸が右に移動）
+ *
+ * 【Goユーザー向け補足】
+ * - isSelected: bool型のオン/オフ状態
+ * - choose: ボタンタイプに応じたスタイルを選択する関数
+ */
+
+// React Nativeの基本コンポーネントと型
+// React Native basic components and types
 import {
   type StyleProp,
   StyleSheet,
@@ -6,14 +28,31 @@ import {
   type ViewStyle,
 } from 'react-native'
 
+// 型安全な選択関数
+// Type-safe selection function
 import {choose} from '#/lib/functions'
+
+// カラー定義
+// Color definitions
 import {colors} from '#/lib/styles'
+
+// テーマフック・タイポグラフィ型
+// Theme hook and typography type
 import {useTheme} from '#/lib/ThemeContext'
 import {type TypographyVariant} from '#/lib/ThemeContext'
+
+// テキストコンポーネント
+// Text component
 import {Text} from '../text/Text'
+
+// ボタンコンポーネント・型
+// Button component and type
 import {Button, type ButtonType} from './Button'
 
 /**
+ * トグルボタンコンポーネント
+ * Toggle Button Component
+ *
  * @deprecated use Toggle from `#/components/form/Toggle.tsx` instead
  */
 export function ToggleButton({

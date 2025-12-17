@@ -1,4 +1,22 @@
+/**
+ * ローディングプレースホルダーコンポーネント集
+ * Loading Placeholder Components Collection
+ *
+ * 【概要】
+ * データ読み込み中に表示するスケルトンUI（プレースホルダー）のコレクション。
+ * 各種コンテンツ（投稿、通知、プロフィール等）のローディング状態を表示。
+ *
+ * 【Goユーザー向け補足】
+ * - スケルトンUI: コンテンツのレイアウトを模した灰色のプレースホルダー
+ *   ローディングスピナーよりも体感速度が速く感じられるUXテクニック
+ */
+
+// Reactフック
+// React hooks
 import {useMemo} from 'react'
+
+// React Nativeの基本コンポーネントと型
+// React Native basic components and types
 import {
   type DimensionValue,
   type StyleProp,
@@ -7,10 +25,24 @@ import {
   type ViewStyle,
 } from 'react-native'
 
+// テーマカラー取得フック
+// Theme color hook
 import {usePalette} from '#/lib/hooks/usePalette'
+
+// 共通スタイル
+// Common styles
 import {s} from '#/lib/styles'
+
+// テーマコンテキスト
+// Theme context
 import {useTheme} from '#/lib/ThemeContext'
+
+// デザインシステム（新）
+// Design system (new)
 import {atoms as a, useTheme as useTheme_NEW} from '#/alf'
+
+// アイコンコンポーネント（投稿コントロール用）
+// Icon components (for post controls)
 import {Bubble_Stroke2_Corner2_Rounded as Bubble} from '#/components/icons/Bubble'
 import {
   Heart2_Filled_Stroke2_Corner0_Rounded as HeartIconFilled,
@@ -18,6 +50,12 @@ import {
 } from '#/components/icons/Heart2'
 import {Repost_Stroke2_Corner2_Rounded as Repost} from '#/components/icons/Repost'
 
+/**
+ * 基本ローディングプレースホルダー
+ * Basic Loading Placeholder
+ *
+ * 単純な矩形のグレーボックス。他のプレースホルダーの基本部品。
+ */
 export function LoadingPlaceholder({
   width,
   height,

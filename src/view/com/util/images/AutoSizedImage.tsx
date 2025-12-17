@@ -1,22 +1,95 @@
+/**
+ * 自動サイズ調整画像コンポーネント
+ * Auto-Sized Image Component
+ *
+ * 【概要】
+ * アスペクト比に基づいて自動的にサイズ調整される画像コンポーネント。
+ * フィードやスレッド内での画像表示に使用。
+ *
+ * 【機能】
+ * - アスペクト比の自動計算・制限
+ * - ALTバッジ表示（アクセシビリティ）
+ * - フルスクリーンアイコン（クロップ時）
+ * - レスポンシブ対応（モバイル/デスクトップで異なる制限）
+ *
+ * 【クロップモード】
+ * - none: クロップなし（最大1:4まで）
+ * - square: 正方形にクロップ
+ * - constrained: 制限付きクロップ（最大1:2まで）
+ *
+ * 【Goユーザー向け補足】
+ * - useAnimatedRef: アニメーション用のref（共有要素トランジション用）
+ * - expo-image: 高性能な画像コンポーネント
+ * - aspectRatio: CSSのaspect-ratioに相当
+ * - paddingTopでアスペクト比を制御するテクニック（CSSハック）
+ */
+
+// Reactフック
+// React hooks
 import React, {useRef} from 'react'
+
+// React Nativeの基本コンポーネント
+// React Native basic components
 import {type DimensionValue, Pressable, View} from 'react-native'
+
+// React Native Reanimated（アニメーション用ref）
+// React Native Reanimated (for animation ref)
 import Animated, {
   type AnimatedRef,
   useAnimatedRef,
 } from 'react-native-reanimated'
+
+// Expo Imageコンポーネント
+// Expo Image component
 import {Image} from 'expo-image'
+
+// AT Protocol API型定義（画像埋め込み）
+// AT Protocol API type (image embed)
 import {type AppBskyEmbedImages} from '@atproto/api'
+
+// 国際化マクロ
+// Internationalization macro
 import {msg} from '@lingui/macro'
+
+// 国際化フック
+// Internationalization hook
 import {useLingui} from '@lingui/react'
 
+// メディアサイズ型
+// Media dimensions type
 import {type Dimensions} from '#/lib/media/types'
+
+// プラットフォーム検出
+// Platform detection
 import {isNative} from '#/platform/detection'
+
+// 大きいALTバッジ設定フック
+// Large ALT badge preference hook
 import {useLargeAltBadgeEnabled} from '#/state/preferences/large-alt-badge'
+
+// デザインシステム
+// Design system
 import {atoms as a, useBreakpoints, useTheme} from '#/alf'
+
+// フルスクリーンアイコン
+// Fullscreen icon
 import {ArrowsDiagonalOut_Stroke2_Corner0_Rounded as Fullscreen} from '#/components/icons/ArrowsDiagonal'
+
+// メディア内側ボーダー
+// Media inset border
 import {MediaInsetBorder} from '#/components/MediaInsetBorder'
+
+// テキストコンポーネント
+// Text component
 import {Text} from '#/components/Typography'
 
+/**
+ * 制約付き画像コンテナ
+ * Constrained Image Container
+ *
+ * アスペクト比に基づいて高さを制限する。
+ * paddingTopパーセンテージでアスペクト比を実現。
+ */
 export function ConstrainedImage({
   aspectRatio,
   fullBleed,

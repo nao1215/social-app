@@ -1,3 +1,24 @@
+/**
+ * エラーメッセージコンポーネント
+ * Error Message Component
+ *
+ * 【概要】
+ * エラー発生時に表示するインラインエラーメッセージコンポーネント。
+ * エラーアイコン、メッセージ、リトライボタンを含むコンパクトな表示。
+ *
+ * 【使用場面】
+ * - データ取得失敗時のエラー表示
+ * - フォーム送信エラー
+ * - ネットワークエラー通知
+ *
+ * 【Goユーザー向け補足】
+ * - TouchableOpacity: タップ時に透明度が変わるタッチ可能コンポーネント
+ * - usePalette('error'): エラー専用のカラーパレット取得
+ * - accessibilityRole: スクリーンリーダー向けの役割指定（Goには直接対応なし）
+ */
+
+// React Nativeの基本コンポーネントと型
+// React Native basic components and types
 import {
   StyleProp,
   StyleSheet,
@@ -5,18 +26,47 @@ import {
   View,
   ViewStyle,
 } from 'react-native'
+
+// FontAwesomeアイコンコンポーネント
+// FontAwesome icon component
 import {
   FontAwesomeIcon,
   FontAwesomeIconStyle,
 } from '@fortawesome/react-native-fontawesome'
+
+// 国際化マクロ
+// Internationalization macro
 import {msg} from '@lingui/macro'
+
+// 国際化フック
+// Internationalization hook
 import {useLingui} from '@lingui/react'
 
+// テーマカラー取得フック
+// Theme color hook
 import {usePalette} from '#/lib/hooks/usePalette'
+
+// テーマコンテキスト
+// Theme context
 import {useTheme} from '#/lib/ThemeContext'
+
+// レイアウトコンポーネント
+// Layout components
 import * as Layout from '#/components/Layout'
+
+// テキストコンポーネント
+// Text component
 import {Text} from '../text/Text'
 
+/**
+ * エラーメッセージコンポーネント
+ * Error Message Component
+ *
+ * @param message エラーメッセージ / Error message
+ * @param numberOfLines 最大表示行数 / Maximum display lines
+ * @param style カスタムスタイル / Custom style
+ * @param onPressTryAgain リトライボタン押下時のコールバック / Callback on retry button press
+ */
 export function ErrorMessage({
   message,
   numberOfLines,

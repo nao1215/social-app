@@ -1,4 +1,38 @@
+/**
+ * リンクコンポーネント集（レガシー）
+ * Link Components Collection (Legacy)
+ *
+ * 【概要】
+ * アプリ内・外部リンクを処理するコンポーネント群。
+ * ナビゲーション、外部URL、モーダル制御を統合的に処理。
+ *
+ * 【注意】
+ * このファイルは非推奨。新規コードでは `#/components/Link.tsx` を使用すること。
+ *
+ * 【含まれるコンポーネント】
+ * - Link: 基本リンクコンポーネント（@deprecated）
+ * - TextLink: テキストリンク（@deprecated）
+ * - TextLinkOnWebOnly: Web専用テキストリンク（@deprecated）
+ *
+ * 【Goユーザー向け補足】
+ * - sanitizeUrl: URLインジェクション対策（GoのnetpackageのURL検証に相当）
+ * - StackActions: React Navigationのスタック操作（push/replace/navigate）
+ * - Goでいうhttp.Router + ミドルウェアに近い役割
+ *
+ * 【リンク処理フロー】
+ * 1. URLをサニタイズ（XSS対策）
+ * 2. Bluesky URLを内部形式に変換
+ * 3. 外部URL → システムブラウザで開く
+ * 4. 内部URL → React Navigationでナビゲート
+ * 5. 修飾キー（Ctrl+Click等） → 新タブで開く
+ */
+
+// Reactフック
+// React hooks
 import {memo, useCallback, useMemo} from 'react'
+
+// React Nativeの基本コンポーネントと型
+// React Native basic components and types
 import {
   type GestureResponderEvent,
   Platform,
@@ -10,54 +44,132 @@ import {
   View,
   type ViewStyle,
 } from 'react-native'
+
+// URLサニタイズライブラリ（XSS対策）
+// URL sanitization library (XSS prevention)
 import {sanitizeUrl} from '@braintree/sanitize-url'
+
+// React Navigationのスタック操作アクション
+// React Navigation stack action creators
 import {StackActions} from '@react-navigation/native'
 
+// デバウンス付きナビゲーションフック
+// Debounced navigation hook
 import {
   type DebouncedNavigationProp,
   useNavigationDeduped,
 } from '#/lib/hooks/useNavigationDeduped'
+
+// 外部リンク開くフック
+// Open external link hook
 import {useOpenLink} from '#/lib/hooks/useOpenLink'
+
+// タブ状態ヘルパー
+// Tab state helpers
 import {getTabState, TabState} from '#/lib/routes/helpers'
+
+// URL処理ユーティリティ
+// URL processing utilities
 import {
   convertBskyAppUrlIfNeeded,
   isExternalUrl,
   linkRequiresWarning,
 } from '#/lib/strings/url-helpers'
+
+// タイポグラフィバリアント型
+// Typography variant type
 import {type TypographyVariant} from '#/lib/ThemeContext'
+
+// プラットフォーム検出
+// Platform detection
 import {isAndroid, isWeb} from '#/platform/detection'
+
+// ソフトリセットイベント発火
+// Soft reset event emitter
 import {emitSoftReset} from '#/state/events'
+
+// モーダル制御フック
+// Modal controls hook
 import {useModalControls} from '#/state/modals'
+
+// Web補助クリックラッパー（中クリック対応）
+// Web auxiliary click wrapper (middle click support)
 import {WebAuxClickWrapper} from '#/view/com/util/WebAuxClickWrapper'
+
+// テーマフック
+// Theme hook
 import {useTheme} from '#/alf'
+
+// グローバルダイアログコンテキスト
+// Global dialogs context
 import {useGlobalDialogsControlContext} from '#/components/dialogs/Context'
+
+// ルーター（パスマッチング用）
+// Router (for path matching)
 import {router} from '../../../routes'
+
+// ホバースタイル対応Pressable
+// Pressable with hover style
 import {PressableWithHover} from './PressableWithHover'
+
+// テキストコンポーネント
+// Text component
 import {Text} from './text/Text'
 
+/**
+ * イベント型（Web/Native両対応）
+ * Event type (Web/Native compatible)
+ */
 type Event =
   | React.MouseEvent<HTMLAnchorElement, MouseEvent>
   | GestureResponderEvent
 
+/**
+ * LinkコンポーネントのProps型
+ * Link Component Props type
+ */
 interface Props extends React.ComponentProps<typeof TouchableOpacity> {
+  /** テストID / Test ID */
   testID?: string
+  /** カスタムスタイル / Custom style */
   style?: StyleProp<ViewStyle>
+  /** リンク先URL / Destination URL */
   href?: string
+  /** リンクタイトル / Link title */
   title?: string
+  /** 子要素 / Children */
   children?: React.ReactNode
+  /** ホバー時のスタイル / Hover style */
   hoverStyle?: StyleProp<ViewStyle>
+  /** フィードバックなしフラグ / No feedback flag */
   noFeedback?: boolean
+  /** アンカータグとしてレンダリング / Render as anchor tag */
   asAnchor?: boolean
+  /** データ属性（Web用） / Data attributes (for Web) */
   dataSet?: any
+  /** アンカーの下線なしフラグ / No underline for anchor */
   anchorNoUnderline?: boolean
+  /** ナビゲーションアクション種別 / Navigation action type */
   navigationAction?: 'push' | 'replace' | 'navigate'
+  /** ポインター進入時コールバック / Pointer enter callback */
   onPointerEnter?: () => void
+  /** ポインター退出時コールバック / Pointer leave callback */
   onPointerLeave?: () => void
+  /** 押下前コールバック / Before press callback */
   onBeforePress?: () => void
 }
 
 /**
+ * 基本リンクコンポーネント（レガシー）
+ * Basic Link Component (Legacy)
+ *
  * @deprecated use Link from `#/components/Link.tsx` instead
+ *
+ * 【処理フロー】
+ * 1. URLをサニタイズ
+ * 2. 押下時にナビゲーション処理を実行
+ * 3. noFeedbackの場合はフィードバックなしPressable
+ * 4. それ以外はホバー対応Pressable
  */
 export const Link = memo(function Link({
   testID,
@@ -160,7 +272,21 @@ export const Link = memo(function Link({
 })
 
 /**
+ * テキストリンクコンポーネント（レガシー）
+ * Text Link Component (Legacy)
+ *
  * @deprecated use InlineLinkText from `#/components/Link.tsx` instead
+ *
+ * 【概要】
+ * テキストとして表示されるリンク。フィッシング対策機能付き。
+ *
+ * 【フィッシング対策】
+ * リンクテキストとhrefが一致しない場合（例: "google.com"と表示して
+ * 実際は"malicious.com"にリンク）、警告ダイアログを表示。
+ *
+ * 【Goユーザー向け補足】
+ * - linkRequiresWarning: URLの不一致を検出する関数
+ *   Goのnet/url.Parseで検証するような処理
  */
 export const TextLink = memo(function TextLink({
   testID,
@@ -287,7 +413,11 @@ export const TextLink = memo(function TextLink({
 })
 
 /**
- * Only acts as a link on desktop web
+ * Web専用テキストリンクのProps型
+ * Web-only Text Link Props type
+ *
+ * デスクトップWebでのみリンクとして機能し、
+ * モバイルでは通常のテキストとして表示される。
  */
 interface TextLinkOnWebOnlyProps extends TextProps {
   testID?: string
@@ -307,8 +437,20 @@ interface TextLinkOnWebOnlyProps extends TextProps {
   onPointerEnter?: () => void
   anchorNoUnderline?: boolean
 }
+
 /**
+ * Web専用テキストリンクコンポーネント（レガシー）
+ * Web-only Text Link Component (Legacy)
+ *
  * @deprecated use WebOnlyInlineLinkText from `#/components/Link.tsx` instead
+ *
+ * 【概要】
+ * デスクトップWebではリンク、モバイルでは通常テキストとして表示。
+ * SEO対策やデスクトップ向けUX向上のため。
+ *
+ * 【Goユーザー向け補足】
+ * - isWeb: プラットフォーム判定（Goのbuild tagsに相当）
+ * - 条件分岐でコンポーネントを切り替え
  */
 export const TextLinkOnWebOnly = memo(function DesktopWebTextLink({
   testID,
@@ -355,19 +497,40 @@ export const TextLinkOnWebOnly = memo(function DesktopWebTextLink({
   )
 })
 
+/**
+ * ナビゲーションから除外するパス
+ * Paths exempt from navigation handling
+ *
+ * これらのパスはシステムブラウザで直接開く。
+ * クローラー・セキュリティ関連の標準ファイル。
+ */
 const EXEMPT_PATHS = ['/robots.txt', '/security.txt', '/.well-known/']
 
-// NOTE
-// we can't use the onPress given by useLinkProps because it will
-// match most paths to the HomeTab routes while we actually want to
-// preserve the tab the app is currently in
-//
-// we also have some additional behaviors - closing the current modal,
-// converting bsky urls, and opening http/s links in the system browser
-//
-// this method copies from the onPress implementation but adds our
-// needed customizations
-// -prf
+/**
+ * リンク押下時の内部処理
+ * Internal link press handler
+ *
+ * 【注意】
+ * useLinkPropsのonPressは使用できない。
+ * 理由: ほとんどのパスがHomeTabにマッチしてしまい、
+ * 現在のタブを維持できないため。
+ *
+ * 【追加動作】
+ * - モーダルを閉じる
+ * - Bluesky URLを内部形式に変換
+ * - http/sリンクはシステムブラウザで開く
+ *
+ * 【Goユーザー向け補足】
+ * - この関数はhttp.Handlerミドルウェアのような役割
+ * - リクエスト（クリック）を適切なハンドラに振り分け
+ *
+ * @param closeModal モーダルを閉じる関数 / Modal close function
+ * @param navigation ナビゲーションオブジェクト / Navigation object
+ * @param href リンク先URL / Destination URL
+ * @param navigationAction ナビゲーションアクション種別 / Navigation action type
+ * @param openLink 外部リンクを開く関数 / External link opener
+ * @param e イベントオブジェクト / Event object
+ */
 function onPressInner(
   closeModal = () => {},
   navigation: DebouncedNavigationProp,
@@ -436,6 +599,26 @@ function onPressInner(
   }
 }
 
+/**
+ * 修飾キー押下判定
+ * Modified Event Detection
+ *
+ * 【概要】
+ * クリック時に修飾キーが押されているかを判定。
+ * 新タブで開く等のブラウザ標準動作を有効にするため。
+ *
+ * 【判定条件】
+ * - target属性が_self以外（別ウィンドウ指定）
+ * - Cmd/Ctrl/Shift/Altキーが押されている
+ * - 中クリック（which === 2）
+ *
+ * 【Goユーザー向け補足】
+ * - Webブラウザ固有の概念（Goには直接対応なし）
+ * - Cmd+Click（Mac）やCtrl+Click（Win）で新タブ
+ *
+ * @param e マウスイベント / Mouse event
+ * @returns 修飾キーが押されているか / Whether modifier key is pressed
+ */
 function isModifiedEvent(e: React.MouseEvent): boolean {
   const eventTarget = e.currentTarget as HTMLAnchorElement
   const target = eventTarget.getAttribute('target')

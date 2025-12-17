@@ -1,30 +1,131 @@
+/**
+ * 投稿メタ情報コンポーネント
+ * Post Meta Information Component
+ *
+ * 【概要】
+ * 投稿の作成者情報と投稿日時を表示するコンポーネント。
+ * アバター、表示名、ハンドル、認証バッジ、経過時間を含む。
+ *
+ * 【表示レイアウト】
+ * [アバター] 表示名✓ @handle · 3h
+ *
+ * 【使用場面】
+ * - フィード内の各投稿のヘッダー部分
+ * - 投稿詳細画面のヘッダー
+ * - 引用投稿内のメタ情報
+ *
+ * 【Goユーザー向け補足】
+ * - memo: Goには直接対応なし（コンポーネント再レンダリング最適化）
+ * - useCallback: 関数のメモ化（Goのクロージャキャプチャに似る）
+ * - useQueryClient: React Queryのキャッシュ管理クライアント
+ * - ProfileHoverCard: マウスホバー時にプロフィールプレビューを表示
+ * - precacheProfile: プロフィールデータを先読みキャッシュ
+ */
+
+// Reactフックとメモ化
+// React hooks and memoization
 import {memo, useCallback} from 'react'
+
+// React Nativeの型
+// React Native types
 import {type StyleProp, View, type ViewStyle} from 'react-native'
+
+// AT Protocol API型定義
+// AT Protocol API type definitions
 import {type AppBskyActorDefs, type ModerationDecision} from '@atproto/api'
+
+// 国際化マクロ
+// Internationalization macro
 import {msg} from '@lingui/macro'
+
+// 国際化フック
+// Internationalization hook
 import {useLingui} from '@lingui/react'
+
+// React Queryクライアント
+// React Query client
 import {useQueryClient} from '@tanstack/react-query'
+
+// React型
+// React type
 import type React from 'react'
 
+// アクターステータスフック（ライブ配信中など）
+// Actor status hook (live streaming, etc.)
 import {useActorStatus} from '#/lib/actor-status'
+
+// プロフィールリンク生成
+// Profile link generation
 import {makeProfileLink} from '#/lib/routes/links'
+
+// 双方向テキスト処理（RTL言語対応）
+// Bidirectional text handling (RTL language support)
 import {forceLTR} from '#/lib/strings/bidi'
+
+// 改行しないスペース定数
+// Non-breaking space constant
 import {NON_BREAKING_SPACE} from '#/lib/strings/constants'
+
+// 表示名サニタイズ
+// Display name sanitization
 import {sanitizeDisplayName} from '#/lib/strings/display-names'
+
+// ハンドルサニタイズ
+// Handle sanitization
 import {sanitizeHandle} from '#/lib/strings/handles'
+
+// 日時フォーマット
+// Date/time formatting
 import {niceDate} from '#/lib/strings/time'
+
+// プラットフォーム検出
+// Platform detection
 import {isAndroid} from '#/platform/detection'
+
+// プロフィールシャドウフック（楽観的更新用）
+// Profile shadow hook (for optimistic updates)
 import {useProfileShadow} from '#/state/cache/profile-shadow'
+
+// プロフィール先読みキャッシュ
+// Profile precache
 import {precacheProfile} from '#/state/queries/profile'
+
+// デザインシステム
+// Design system
 import {atoms as a, platform, useTheme, web} from '#/alf'
+
+// Web専用インラインリンク
+// Web-only inline link
 import {WebOnlyInlineLinkText} from '#/components/Link'
+
+// プロフィールホバーカード
+// Profile hover card
 import {ProfileHoverCard} from '#/components/ProfileHoverCard'
+
+// テキストコンポーネント
+// Text component
 import {Text} from '#/components/Typography'
+
+// 認証状態フック
+// Verification state hook
 import {useSimpleVerificationState} from '#/components/verification'
+
+// 認証チェックマーク
+// Verification check mark
 import {VerificationCheck} from '#/components/verification/VerificationCheck'
+
+// 経過時間表示
+// Time elapsed display
 import {TimeElapsed} from './TimeElapsed'
+
+// ユーザーアバター（プレビュー可能）
+// User avatar (previewable)
 import {PreviewableUserAvatar} from './UserAvatar'
 
+/**
+ * 投稿メタ情報のProps型
+ * Post Meta Props type
+ */
 interface PostMetaOpts {
   author: AppBskyActorDefs.ProfileViewBasic
   moderation: ModerationDecision | undefined
@@ -36,20 +137,38 @@ interface PostMetaOpts {
   style?: StyleProp<ViewStyle>
 }
 
+/**
+ * 投稿メタ情報コンポーネント本体
+ * Post Meta Component Implementation
+ *
+ * 【処理フロー】
+ * 1. プロフィールシャドウで楽観的更新を適用
+ * 2. 表示名・ハンドルを取得（フォールバック付き）
+ * 3. リンク押下時にプロフィールを先読みキャッシュ
+ * 4. 認証バッジ・ライブバッジの表示判定
+ */
 let PostMeta = (opts: PostMetaOpts): React.ReactNode => {
   const t = useTheme()
   const {i18n, _} = useLingui()
 
+  // プロフィールシャドウ: 楽観的更新を反映したプロフィール
+  // Profile shadow: profile with optimistic updates applied
   const author = useProfileShadow(opts.author)
   const displayName = author.displayName || author.handle
   const handle = author.handle
   const profileLink = makeProfileLink(author)
   const queryClient = useQueryClient()
   const onOpenAuthor = opts.onOpenAuthor
+
+  // 著者リンク押下前のコールバック: プロフィールを先読みキャッシュ
+  // Callback before author link press: precache profile
   const onBeforePressAuthor = useCallback(() => {
     precacheProfile(queryClient, author)
     onOpenAuthor?.()
   }, [queryClient, author, onOpenAuthor])
+
+  // 投稿リンク押下前のコールバック
+  // Callback before post link press
   const onBeforePressPost = useCallback(() => {
     precacheProfile(queryClient, author)
   }, [queryClient, author])

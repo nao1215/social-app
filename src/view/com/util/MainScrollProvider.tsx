@@ -1,13 +1,68 @@
+/**
+ * メインスクロールプロバイダー
+ * Main Scroll Provider
+ *
+ * 【概要】
+ * アプリのメインスクロール領域のスクロールイベントを監視し、
+ * ヘッダー/フッターの表示・非表示を制御するプロバイダーコンポーネント。
+ *
+ * 【主な機能】
+ * - スクロール方向の検出
+ * - ヘッダーの自動表示/非表示
+ * - スクロール位置に応じたアニメーション
+ * - Web/Native両対応
+ *
+ * 【動作原理】
+ * - 下スクロール: ヘッダーを隠す（コンテンツ領域を広げる）
+ * - 上スクロール: ヘッダーを表示
+ * - ページ上部付近: 常にヘッダー表示
+ *
+ * 【Goユーザー向け補足】
+ * - useSharedValue: UIスレッドとJSスレッド間で共有される値
+ *   Goのatomic.Valueに似た同期プリミティブ
+ * - worklet: UIスレッドで実行される高速な関数
+ * - EventEmitter: Goのchannelに似たイベント通知機構
+ * - interpolate: 値の補間（線形変換）
+ */
+
+// Reactコア
+// React core
 import React, {useCallback, useEffect} from 'react'
+
+// React Nativeのスクロールイベント型
+// React Native scroll event type
 import {NativeScrollEvent} from 'react-native'
+
+// Reanimated（アニメーション、共有値、スプリング効果）
+// Reanimated (animation, shared value, spring effect)
 import {interpolate, useSharedValue, withSpring} from 'react-native-reanimated'
+
+// イベントエミッター（イベント通知）
+// Event emitter (event notification)
 import EventEmitter from 'eventemitter3'
 
+// スクロールコンテキストプロバイダー
+// Scroll context provider
 import {ScrollProvider} from '#/lib/ScrollContext'
+
+// プラットフォーム検出
+// Platform detection
 import {isNative, isWeb} from '#/platform/detection'
+
+// ミニマルシェルモードフック（ヘッダー表示状態）
+// Minimal shell mode hook (header visibility state)
 import {useMinimalShellMode} from '#/state/shell'
+
+// シェルレイアウトフック（ヘッダー高さ等）
+// Shell layout hook (header height, etc.)
 import {useShellLayout} from '#/state/shell/shell-layout'
 
+/**
+ * Webでヘッダーを隠すスクロール閾値（ピクセル）
+ * Scroll threshold to hide header on Web (pixels)
+ *
+ * この値未満のスクロール位置ではヘッダーを常に表示
+ */
 const WEB_HIDE_SHELL_THRESHOLD = 200
 
 function clamp(num: number, min: number, max: number) {
